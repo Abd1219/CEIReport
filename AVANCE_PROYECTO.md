@@ -49,10 +49,16 @@
 - **Totales Automáticos**: Cálculo en tiempo real del Total de Cantidad y Total de Horas de equipos.
 - **Total de HM**: Banner destacado que calcula y muestra las Horas Máquina (HM) totales.
 
-### 9. Pantalla 6: Evidencias Fotográficas, Firma y Finalización
-- **Captura e Importación de Fotos**: Integración con cámara del dispositivo y galería de fotos.
+### 9. Pantalla 6: Actividades Planeadas para el Siguiente Día **[NUEVO]**
+- **Registro Dinámico**: Lista interactiva para programar y planear las actividades de la siguiente jornada laboral con botón de agregar, diálogo interactivo y opción de eliminación.
+- **Exportación Excel**: Se exporta numerada como sección dedicada en el archivo Excel generado.
+
+### 10. Pantalla 7: Evidencias Fotográficas, Croquis Descriptivo y Firma
+- **Corrección de Cámara**: Solucionado el fallo al abrir la cámara agregando gestión de permisos en tiempo real (`Manifest.permission.CAMERA`) y `FileProvider` con rutas ampliadas.
+- **Pie de Foto / Descripción de Fotografía**: Al tomar una foto o elegirla de la galería, se solicita un texto o nota descriptiva opcional que se muestra debajo de cada foto y se incluye en el reporte Excel.
+- **Croquis Descriptivo**: Apartado dedicado para adjuntar o capturar una imagen del croquis o esquema del área de trabajo.
 - **Firma Digital**: Modal interactivo de firma (*SignaturePad*) con previsualización en tiempo real.
-- **Exportación única a Excel (.xlsx)**: Generación automática de archivo **Excel (.xlsx)** (se eliminó el PDF) con opción de compartir mediante Intent nativo (*WhatsApp, Correo, Drive*).
+- **Exportación única a Excel (.xlsx)**: Generación automática del archivo Excel con fotos, notas, croquis, actividades y firma.
 
 ### 7. Splash Screen
 - Animación de entrada con logo, barra de progreso y branding *"Desarrollado por AbdApps"*.
@@ -72,6 +78,14 @@
 
 ## 📅 Historial de Actualizaciones Recientes
 
+- **[2026-07-28]** *(Sesión 5 - Actividades Planeadas, Croquis & Solución de Cámara)*:
+  - Nueva **Pantalla 6**: Actividades Planeadas para el Siguiente Día con lista dinámica interactiva.
+  - **Corrección de error de Cámara**: Implementada solicitud de permisos `CAMERA` en tiempo real y `FileProvider` configurado con todas las rutas necesarias.
+  - **Descripción / Pie de Foto**: Modal interactivo para agregar o editar notas explicativas por cada fotografía capturada o seleccionada.
+  - **Croquis Descriptivo**: Sección dedicada en evidencias para adjuntar el croquis o esquema descriptivo del área.
+  - Flujo expandido a **7 pasos** mantenidos con navegación deslizable (*HorizontalPager*).
+  - Actualización de entidad `Report` y migración a Room DB v7.
+  - `ExcelGenerator` actualizado para incluir Actividades Planeadas, notas al pie de imágenes y renderizado de Croquis Descriptivo.
 - **[2026-07-28]** *(Sesión 4 - Maquinaria Utilizada & Navegación Deslizable)*:
   - Nueva **Pantalla 5**: Maquinaria Utilizada con tabla para 7 equipos (Bailarina, Hormigonera, Minicar, Vehículos, Generador, Rotomartillo, Compresor).
   - Cálculo de **Total de HM** (Horas Máquina) y total de equipos en tiempo real.

@@ -80,7 +80,7 @@ fun SafetyWeatherScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 2 de 6 — Condiciones de Campo",
+                            text = "Paso 2 de 7 — Condiciones de Campo",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -151,7 +151,7 @@ fun SafetyWeatherScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo
-            StepProgressBar(currentStep = 2, totalSteps = 6)
+            StepProgressBar(currentStep = 2, totalSteps = 7)
 
             // ── SECCIÓN 1: SEGURIDAD ─────────────────────────────────────────
             FormCard(title = "Actividades de Seguridad") {

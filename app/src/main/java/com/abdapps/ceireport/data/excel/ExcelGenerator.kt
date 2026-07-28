@@ -346,10 +346,48 @@ object ExcelGenerator {
         sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
         currentRow += 2
 
+        // 7. Actividades Planeadas Block
+        currentRow++
+        val planHeaderRow = sheet.createRow(currentRow)
+        planHeaderRow.heightInPoints = 22f
+        val planHeaderCell = planHeaderRow.createCell(0)
+        planHeaderCell.setCellValue("Actividades Planeadas para el Siguiente Día")
+        planHeaderCell.cellStyle = sectionHeaderStyle
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+
+        currentRow++
+        if (report.actividadesPlaneadas.isNotEmpty()) {
+            report.actividadesPlaneadas.forEachIndexed { index, actividad ->
+                val planRow = sheet.createRow(currentRow)
+                planRow.heightInPoints = 22f
+
+                val numCell = planRow.createCell(0)
+                numCell.setCellValue("${index + 1}.")
+                numCell.cellStyle = labelStyle
+
+                val actCell = planRow.createCell(1)
+                actCell.setCellValue(actividad)
+                actCell.cellStyle = valueStyle
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
+
+                currentRow++
+            }
+        } else {
+            val emptyRow = sheet.createRow(currentRow)
+            emptyRow.heightInPoints = 20f
+            val emptyCell = emptyRow.createCell(0)
+            emptyCell.setCellValue("Sin actividades planeadas registradas")
+            emptyCell.cellStyle = valueStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+            currentRow++
+        }
+
+        currentRow++
+
         // Helper for Drawing Pictures
         val drawing = sheet.createDrawingPatriarch()
 
-        // 5. Photos Section
+        // 8. Evidencias Fotográficas con Descripción
         if (report.photos.isNotEmpty()) {
             val photoHeaderRow = sheet.createRow(currentRow)
             photoHeaderRow.heightInPoints = 22f
@@ -361,8 +399,10 @@ object ExcelGenerator {
             currentRow += 2
 
             var photoCol = 0
-            for (photoPath in report.photos) {
+            report.photos.forEachIndexed { index, photoPath ->
                 val file = File(photoPath)
+                val caption = report.photoCaptions.getOrElse(index) { "" }
+
                 if (file.exists()) {
                     try {
                         val bytes = compressImage(file, 400, 300)
@@ -380,16 +420,60 @@ object ExcelGenerator {
                         e.printStackTrace()
                     }
                 }
+
+                // Pie de foto debajo de la imagen
+                if (caption.isNotBlank()) {
+                    val capRow = sheet.getRow(currentRow + 8) ?: sheet.createRow(currentRow + 8)
+                    capRow.heightInPoints = 18f
+                    val capCell = capRow.createCell(photoCol)
+                    capCell.setCellValue("Nota: $caption")
+                    capCell.cellStyle = valueStyle
+                    sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow + 8, currentRow + 8, photoCol, photoCol + 2))
+                }
+
                 photoCol += 3
                 if (photoCol >= 6) {
                     photoCol = 0
-                    currentRow += 9
+                    currentRow += 10
                 }
             }
             if (photoCol != 0) {
-                currentRow += 9
+                currentRow += 10
             }
             currentRow++
+        }
+
+        // 9. Croquis Descriptivo Section
+        if (!report.croquisPath.isNullOrEmpty()) {
+            val croquisFile = File(report.croquisPath)
+            if (croquisFile.exists()) {
+                val croquisHeaderRow = sheet.createRow(currentRow)
+                croquisHeaderRow.heightInPoints = 22f
+                val croquisHeaderCell = croquisHeaderRow.createCell(0)
+                croquisHeaderCell.setCellValue("Croquis Descriptivo")
+                croquisHeaderCell.cellStyle = sectionHeaderStyle
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+
+                currentRow += 2
+
+                try {
+                    val bytes = compressImage(croquisFile, 600, 400)
+                    if (bytes != null) {
+                        val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_JPEG)
+                        val anchor = workbook.creationHelper.createClientAnchor().apply {
+                            setCol1(0)
+                            setRow1(currentRow)
+                            setCol2(6)
+                            setRow2(currentRow + 12)
+                        }
+                        drawing.createPicture(anchor, pictureIdx)
+                        currentRow += 13
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                currentRow++
+            }
         }
 
         // 6. Signature Section

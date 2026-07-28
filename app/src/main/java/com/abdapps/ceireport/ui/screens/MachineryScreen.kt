@@ -99,7 +99,7 @@ fun MachineryScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 5 de 6 — Equipos en Campo",
+                            text = "Paso 5 de 7 — Equipos en Campo",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -172,7 +172,7 @@ fun MachineryScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo (Paso 5 de 6)
-            StepProgressBar(currentStep = 5, totalSteps = 6)
+            StepProgressBar(currentStep = 5, totalSteps = 7)
 
             // ── TARJETA PRINCIPAL: MAQUINARIA UTILIZADA ──────────────────────
             Card(

@@ -103,7 +103,7 @@ fun WorkforceScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 4 de 6 — Personal en Campo",
+                            text = "Paso 4 de 7 — Personal en Campo",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -176,7 +176,7 @@ fun WorkforceScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo (Paso 4 de 5)
-            StepProgressBar(currentStep = 4, totalSteps = 6)
+            StepProgressBar(currentStep = 4, totalSteps = 7)
 
             // ── TARJETA PRINCIPAL: FUERZA DE TRABAJO ─────────────────────────
             Card(

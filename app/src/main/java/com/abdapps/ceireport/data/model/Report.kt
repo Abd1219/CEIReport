@@ -49,6 +49,15 @@ data class Report(
     @ColumnInfo(defaultValue = "")
     val maquinariaHoras: List<String> = emptyList(),       // 7 valores, uno por equipo
 
+    // ── Pantalla 6: Actividades Planeadas (Siguiente Día) ─────────────────
+    @ColumnInfo(defaultValue = "")
+    val actividadesPlaneadas: List<String> = emptyList(),
+
+    // ── Pantalla 7: Evidencias Fotográficas, Croquis y Firma ──────────────
+    @ColumnInfo(defaultValue = "")
+    val photoCaptions: List<String> = emptyList(),          // Descripción por cada foto en photos
+    val croquisPath: String? = null,                        // Ruta de imagen de Croquis Descriptivo
+
     // ── Campos generales existentes ──────────────────────────────────────────
     val title: String = "",
     val date: String = "",

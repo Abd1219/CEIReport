@@ -59,7 +59,7 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
         }
     }
 
-    fun addPhotoToReport(context: Context, uri: Uri) {
+    fun addPhotoToReport(context: Context, uri: Uri, caption: String = "") {
         val report = _currentReport.value ?: return
         viewModelScope.launch {
             try {
@@ -71,11 +71,55 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
                     }
                 }
                 val updatedPhotos = report.photos.toMutableList().apply { add(file.absolutePath) }
-                updateCurrentReport { it.copy(photos = updatedPhotos) }
+                val updatedCaptions = report.photoCaptions.toMutableList().apply { add(caption) }
+                updateCurrentReport { it.copy(photos = updatedPhotos, photoCaptions = updatedCaptions) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun removePhotoAt(index: Int) {
+        val report = _currentReport.value ?: return
+        if (index in report.photos.indices) {
+            val updatedPhotos = report.photos.toMutableList().apply { removeAt(index) }
+            val updatedCaptions = report.photoCaptions.toMutableList().apply {
+                if (index in indices) removeAt(index)
+            }
+            updateCurrentReport { it.copy(photos = updatedPhotos, photoCaptions = updatedCaptions) }
+        }
+    }
+
+    fun updatePhotoCaption(index: Int, caption: String) {
+        val report = _currentReport.value ?: return
+        if (index in report.photos.indices) {
+            val updatedCaptions = report.photoCaptions.toMutableList().apply {
+                while (size <= index) add("")
+                this[index] = caption
+            }
+            updateCurrentReport { it.copy(photoCaptions = updatedCaptions) }
+        }
+    }
+
+    fun saveCroquis(context: Context, uri: Uri) {
+        val report = _currentReport.value ?: return
+        viewModelScope.launch {
+            try {
+                val file = createTempImageFile(context, "croquis")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                updateCurrentReport { it.copy(croquisPath = file.absolutePath) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun removeCroquis() {
+        updateCurrentReport { it.copy(croquisPath = null) }
     }
 
     fun saveSignature(context: Context, bitmap: Bitmap) {

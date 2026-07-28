@@ -22,6 +22,7 @@ import com.abdapps.ceireport.data.repository.ReportRepository
 import com.abdapps.ceireport.ui.screens.ActivitiesObservationsScreen
 import com.abdapps.ceireport.ui.screens.GeneralDataScreen
 import com.abdapps.ceireport.ui.screens.MachineryScreen
+import com.abdapps.ceireport.ui.screens.PlannedActivitiesScreen
 import com.abdapps.ceireport.ui.screens.ReportFormScreen
 import com.abdapps.ceireport.ui.screens.ReportListScreen
 import com.abdapps.ceireport.ui.screens.SafetyWeatherScreen
@@ -84,11 +85,11 @@ private fun FormPagerFlow(
     viewModel: ReportViewModel,
     onExitFlow: () -> Unit
 ) {
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 6 })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 7 })
     val coroutineScope = rememberCoroutineScope()
 
     fun scrollToPage(targetPage: Int) {
-        if (targetPage in 0..5) {
+        if (targetPage in 0..6) {
             coroutineScope.launch {
                 pagerState.animateScrollToPage(targetPage)
             }
@@ -141,11 +142,19 @@ private fun FormPagerFlow(
                     onNavigateNext = { scrollToPage(5) }
                 )
             }
-            // ── Paso 6: Evidencias Fotográficas y Firma ──────────────
+            // ── Paso 6: Actividades Planeadas para el Siguiente Día ───
             5 -> {
+                PlannedActivitiesScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { scrollToPage(4) },
+                    onNavigateNext = { scrollToPage(6) }
+                )
+            }
+            // ── Paso 7: Evidencias Fotográficas, Croquis y Firma ─────
+            6 -> {
                 ReportFormScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(4) }
+                    onNavigateBack = { scrollToPage(5) }
                 )
             }
         }
