@@ -269,6 +269,83 @@ object ExcelGenerator {
         sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
         currentRow += 2
 
+        // 6. Maquinaria Utilizada Block
+        val equiposNombres = listOf(
+            "Bailarina", "Hormigonera", "Minicar", "Vehículos",
+            "Generador", "Rotomartillo", "Compresor"
+        )
+
+        val machineryHeaderRow = sheet.createRow(currentRow)
+        machineryHeaderRow.heightInPoints = 22f
+        val machineryHeaderCell = machineryHeaderRow.createCell(0)
+        machineryHeaderCell.setCellValue("Maquinaria Utilizada")
+        machineryHeaderCell.cellStyle = sectionHeaderStyle
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+        currentRow++
+
+        // Sub-encabezado de columnas
+        val macColHeaderRow = sheet.createRow(currentRow)
+        macColHeaderRow.heightInPoints = 20f
+        macColHeaderRow.createCell(0).apply {
+            setCellValue("Maquinaria / Equipo")
+            cellStyle = labelStyle
+        }
+        macColHeaderRow.createCell(1).apply {
+            setCellValue("Cantidad")
+            cellStyle = labelStyle
+        }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+        macColHeaderRow.createCell(3).apply {
+            setCellValue("Horas")
+            cellStyle = labelStyle
+        }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+        currentRow++
+
+        // Filas de cada equipo
+        var totalCantidadMac = 0
+        var totalHorasMac = 0.0
+        equiposNombres.forEachIndexed { index, equipo ->
+            val macRow = sheet.createRow(currentRow)
+            macRow.heightInPoints = 20f
+
+            val cantStr = report.maquinariaCantidades.getOrElse(index) { "" }
+            val horStr = report.maquinariaHoras.getOrElse(index) { "" }
+            val cant = cantStr.toIntOrNull() ?: 0
+            val hor = horStr.toDoubleOrNull() ?: 0.0
+            totalCantidadMac += cant
+            totalHorasMac += hor
+
+            macRow.createCell(0).apply { setCellValue(equipo); cellStyle = labelStyle }
+            macRow.createCell(1).apply { setCellValue(cant.toDouble()); cellStyle = valueStyle }
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+            macRow.createCell(3).apply { setCellValue(hor); cellStyle = valueStyle }
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+            currentRow++
+        }
+
+        // Fila de totales
+        val macTotalRow = sheet.createRow(currentRow)
+        macTotalRow.heightInPoints = 22f
+        macTotalRow.createCell(0).apply { setCellValue("TOTAL"); cellStyle = labelStyle }
+        macTotalRow.createCell(1).apply { setCellValue(totalCantidadMac.toDouble()); cellStyle = labelStyle }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+        macTotalRow.createCell(3).apply { setCellValue(totalHorasMac); cellStyle = labelStyle }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+        currentRow++
+
+        // Total HM
+        val hmRow = sheet.createRow(currentRow)
+        hmRow.heightInPoints = 24f
+        hmRow.createCell(0).apply { setCellValue("Total de HM"); cellStyle = sectionHeaderStyle }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 2))
+        hmRow.createCell(3).apply {
+            setCellValue("${"%.1f".format(totalHorasMac)} hrs")
+            cellStyle = sectionHeaderStyle
+        }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+        currentRow += 2
+
         // Helper for Drawing Pictures
         val drawing = sheet.createDrawingPatriarch()
 

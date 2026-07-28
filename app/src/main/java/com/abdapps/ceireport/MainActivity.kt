@@ -6,17 +6,22 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.abdapps.ceireport.data.local.ReportDatabase
 import com.abdapps.ceireport.data.repository.ReportRepository
 import com.abdapps.ceireport.ui.screens.ActivitiesObservationsScreen
 import com.abdapps.ceireport.ui.screens.GeneralDataScreen
+import com.abdapps.ceireport.ui.screens.MachineryScreen
 import com.abdapps.ceireport.ui.screens.ReportFormScreen
 import com.abdapps.ceireport.ui.screens.ReportListScreen
 import com.abdapps.ceireport.ui.screens.SafetyWeatherScreen
@@ -25,6 +30,7 @@ import com.abdapps.ceireport.ui.screens.WorkforceScreen
 import com.abdapps.ceireport.ui.theme.CEIReportTheme
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModelFactory
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -56,50 +62,91 @@ class MainActivity : ComponentActivity() {
                         "list" -> {
                             ReportListScreen(
                                 viewModel = viewModel,
-                                onNavigateToForm = { currentScreen = "generalData" }
+                                onNavigateToForm = { currentScreen = "formFlow" }
                             )
                         }
-                        // ── Pantalla 1: Datos Generales ───────────────────────
-                        "generalData" -> {
-                            GeneralDataScreen(
+                        // ── Flujo de Formulario con Deslizamiento (Pager) ─────
+                        "formFlow" -> {
+                            FormPagerFlow(
                                 viewModel = viewModel,
-                                onNavigateBack = { currentScreen = "list" },
-                                onNavigateNext = { currentScreen = "safety" }
-                            )
-                        }
-                        // ── Pantalla 2: Seguridad y Clima ─────────────────
-                        "safety" -> {
-                            SafetyWeatherScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { currentScreen = "generalData" },
-                                onNavigateNext = { currentScreen = "activities" }
-                            )
-                        }
-                        // ── Pantalla 3: Actividades Realizadas y Observaciones ──
-                        "activities" -> {
-                            ActivitiesObservationsScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { currentScreen = "safety" },
-                                onNavigateNext = { currentScreen = "workforce" }
-                            )
-                        }
-                        // ── Pantalla 4: Fuerza de Trabajo ────────────────────────
-                        "workforce" -> {
-                            WorkforceScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { currentScreen = "activities" },
-                                onNavigateNext = { currentScreen = "form" }
-                            )
-                        }
-                        // ── Pantalla 5: Evidencias Fotográficas y Firma ──────
-                        "form" -> {
-                            ReportFormScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { currentScreen = "workforce" }
+                                onExitFlow = { currentScreen = "list" }
                             )
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FormPagerFlow(
+    viewModel: ReportViewModel,
+    onExitFlow: () -> Unit
+) {
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 6 })
+    val coroutineScope = rememberCoroutineScope()
+
+    fun scrollToPage(targetPage: Int) {
+        if (targetPage in 0..5) {
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(targetPage)
+            }
+        }
+    }
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        userScrollEnabled = true // Permite deslizar libremente entre pantallas
+    ) { page ->
+        when (page) {
+            // ── Paso 1: Datos Generales ───────────────────────────────
+            0 -> {
+                GeneralDataScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { onExitFlow() },
+                    onNavigateNext = { scrollToPage(1) }
+                )
+            }
+            // ── Paso 2: Seguridad y Clima ─────────────────────────────
+            1 -> {
+                SafetyWeatherScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { scrollToPage(0) },
+                    onNavigateNext = { scrollToPage(2) }
+                )
+            }
+            // ── Paso 3: Actividades Realizadas y Observaciones ────────
+            2 -> {
+                ActivitiesObservationsScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { scrollToPage(1) },
+                    onNavigateNext = { scrollToPage(3) }
+                )
+            }
+            // ── Paso 4: Fuerza de Trabajo ─────────────────────────────
+            3 -> {
+                WorkforceScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { scrollToPage(2) },
+                    onNavigateNext = { scrollToPage(4) }
+                )
+            }
+            // ── Paso 5: Maquinaria Utilizada ──────────────────────────
+            4 -> {
+                MachineryScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { scrollToPage(3) },
+                    onNavigateNext = { scrollToPage(5) }
+                )
+            }
+            // ── Paso 6: Evidencias Fotográficas y Firma ──────────────
+            5 -> {
+                ReportFormScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { scrollToPage(4) }
+                )
             }
         }
     }

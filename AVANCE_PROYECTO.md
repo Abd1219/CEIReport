@@ -44,7 +44,12 @@
 - **Totales Automáticos**: Cálculo dinámico en tiempo real de totales de personal y horas trabajadas.
 - **Total de HH**: Banner destacado que calcula y muestra las Horas Hombre acumuladas de la jornada.
 
-### 8. Pantalla 5: Evidencias Fotográficas, Firma y Finalización
+### 8. Pantalla 5: Maquinaria Utilizada **[NUEVO]**
+- **Equipos en Campo**: Tabla interactiva para registrar Cantidad y Horas trabajadas de 7 equipos específicos (*Bailarina, Hormigonera, Minicar, Vehículos, Generador, Rotomartillo, Compresor*).
+- **Totales Automáticos**: Cálculo en tiempo real del Total de Cantidad y Total de Horas de equipos.
+- **Total de HM**: Banner destacado que calcula y muestra las Horas Máquina (HM) totales.
+
+### 9. Pantalla 6: Evidencias Fotográficas, Firma y Finalización
 - **Captura e Importación de Fotos**: Integración con cámara del dispositivo y galería de fotos.
 - **Firma Digital**: Modal interactivo de firma (*SignaturePad*) con previsualización en tiempo real.
 - **Exportación única a Excel (.xlsx)**: Generación automática de archivo **Excel (.xlsx)** (se eliminó el PDF) con opción de compartir mediante Intent nativo (*WhatsApp, Correo, Drive*).
@@ -67,6 +72,13 @@
 
 ## 📅 Historial de Actualizaciones Recientes
 
+- **[2026-07-28]** *(Sesión 4 - Maquinaria Utilizada & Navegación Deslizable)*:
+  - Nueva **Pantalla 5**: Maquinaria Utilizada con tabla para 7 equipos (Bailarina, Hormigonera, Minicar, Vehículos, Generador, Rotomartillo, Compresor).
+  - Cálculo de **Total de HM** (Horas Máquina) y total de equipos en tiempo real.
+  - Implementada **Navegación Deslizable (HorizontalPager)**: los usuarios pueden cambiar entre los 6 pasos deslizando horizontalmente la pantalla hacia la izquierda o derecha.
+  - Flujo de formulario expandido a **6 pasos**.
+  - `ExcelGenerator` actualizado para renderizar la tabla de Maquinaria Utilizada y Total de HM.
+  - Actualización de entidad `Report` y migración a Room DB v6.
 - **[2026-07-28]** *(Sesión 3 - Fuerza de Trabajo)*:
   - Nueva **Pantalla 4**: Fuerza de Trabajo con tabla interactiva de 10 roles (Sp seg, Residente, O.P., Topógrafo, Cadenero, Oficiales, Ayudante, Banderero, Sup. Obra, Sup. Calidad).
   - Ingreso de **Cantidad** y **Horas** por cada rol con teclados numéricos adaptados.

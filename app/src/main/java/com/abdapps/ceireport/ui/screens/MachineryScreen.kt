@@ -3,7 +3,6 @@ package com.abdapps.ceireport.ui.screens
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,23 +28,20 @@ import androidx.compose.ui.unit.sp
 import com.abdapps.ceireport.ui.theme.*
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 
-// ── Roles fijos de fuerza de trabajo ─────────────────────────────────────────
-private val ROLES_TRABAJO = listOf(
-    "Sp. Seg.",
-    "Residente",
-    "O.P.",
-    "Topógrafo",
-    "Cadenero",
-    "Oficiales",
-    "Ayudante",
-    "Banderero",
-    "Sup. Obra",
-    "Sup. Calidad"
+// ── Lista de maquinaria fija ──────────────────────────────────────────────────
+private val EQUIPOS_MAQUINARIA = listOf(
+    "Bailarina",
+    "Hormigonera",
+    "Minicar",
+    "Vehículos",
+    "Generador",
+    "Rotomartillo",
+    "Compresor"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkforceScreen(
+fun MachineryScreen(
     viewModel: ReportViewModel,
     onNavigateBack: () -> Unit,
     onNavigateNext: () -> Unit
@@ -63,15 +59,15 @@ fun WorkforceScreen(
     // Estado local para cantidades y horas — inicializado desde el reporte
     val cantidades = remember(report.id) {
         mutableStateListOf<String>().apply {
-            ROLES_TRABAJO.indices.forEach { i ->
-                add(report.fuerzaTrabajoCantidades.getOrElse(i) { "" })
+            EQUIPOS_MAQUINARIA.indices.forEach { i ->
+                add(report.maquinariaCantidades.getOrElse(i) { "" })
             }
         }
     }
     val horas = remember(report.id) {
         mutableStateListOf<String>().apply {
-            ROLES_TRABAJO.indices.forEach { i ->
-                add(report.fuerzaTrabajoHoras.getOrElse(i) { "" })
+            EQUIPOS_MAQUINARIA.indices.forEach { i ->
+                add(report.maquinariaHoras.getOrElse(i) { "" })
             }
         }
     }
@@ -84,8 +80,8 @@ fun WorkforceScreen(
     fun persistChanges() {
         viewModel.updateCurrentReport { r ->
             r.copy(
-                fuerzaTrabajoCantidades = cantidades.toList(),
-                fuerzaTrabajoHoras = horas.toList()
+                maquinariaCantidades = cantidades.toList(),
+                maquinariaHoras = horas.toList()
             )
         }
     }
@@ -97,13 +93,13 @@ fun WorkforceScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Fuerza de Trabajo",
+                            text = "Maquinaria Utilizada",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 4 de 6 — Personal en Campo",
+                            text = "Paso 5 de 6 — Equipos en Campo",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -175,10 +171,10 @@ fun WorkforceScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo (Paso 4 de 5)
-            StepProgressBar(currentStep = 4, totalSteps = 6)
+            // Barra de progreso del flujo (Paso 5 de 6)
+            StepProgressBar(currentStep = 5, totalSteps = 6)
 
-            // ── TARJETA PRINCIPAL: FUERZA DE TRABAJO ─────────────────────────
+            // ── TARJETA PRINCIPAL: MAQUINARIA UTILIZADA ──────────────────────
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -197,13 +193,13 @@ fun WorkforceScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Groups,
+                            imageVector = Icons.Default.PrecisionManufacturing,
                             contentDescription = null,
                             tint = HeaderBlue,
                             modifier = Modifier.size(22.dp)
                         )
                         Text(
-                            text = "Registro de Personal",
+                            text = "Registro de Maquinaria y Equipos",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = HeaderBlue
@@ -213,7 +209,7 @@ fun WorkforceScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // ── Fila de encabezado de tabla ───────────────────────────
-                    WorkforceTableHeader()
+                    MachineryTableHeader()
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 4.dp),
@@ -221,10 +217,10 @@ fun WorkforceScreen(
                         thickness = 1.5.dp
                     )
 
-                    // ── Filas de datos por rol ────────────────────────────────
-                    ROLES_TRABAJO.forEachIndexed { index, rol ->
-                        WorkforceTableRow(
-                            rol = rol,
+                    // ── Filas de datos por equipo ─────────────────────────────
+                    EQUIPOS_MAQUINARIA.forEachIndexed { index, equipo ->
+                        MachineryTableRow(
+                            equipo = equipo,
                             cantidad = cantidades.getOrElse(index) { "" },
                             horas = horas.getOrElse(index) { "" },
                             isAlternate = index % 2 == 1,
@@ -239,7 +235,7 @@ fun WorkforceScreen(
                                 }
                             }
                         )
-                        if (index < ROLES_TRABAJO.lastIndex) {
+                        if (index < EQUIPOS_MAQUINARIA.lastIndex) {
                             HorizontalDivider(color = Color(0xFFF1F5F9))
                         }
                     }
@@ -251,14 +247,14 @@ fun WorkforceScreen(
                     )
 
                     // ── Fila de totales ───────────────────────────────────────
-                    WorkforceTotalsRow(
+                    MachineryTotalsRow(
                         totalCantidad = totalCantidad,
                         totalHoras = totalHoras
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ── Banner: Total de HH ───────────────────────────────────
+                    // ── Banner: Total de HM ───────────────────────────────────
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -272,7 +268,7 @@ fun WorkforceScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Total de HH",
+                                text = "Total de HM",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -314,7 +310,7 @@ fun WorkforceScreen(
 // ── COMPONENTES INTERNOS ───────────────────────────────────────────────────────
 
 @Composable
-private fun WorkforceTableHeader() {
+private fun MachineryTableHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -324,7 +320,7 @@ private fun WorkforceTableHeader() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Rol / Puesto",
+            text = "Maquinaria / Equipo",
             modifier = Modifier.weight(1.8f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
@@ -350,8 +346,8 @@ private fun WorkforceTableHeader() {
 }
 
 @Composable
-private fun WorkforceTableRow(
-    rol: String,
+private fun MachineryTableRow(
+    equipo: String,
     cantidad: String,
     horas: String,
     isAlternate: Boolean,
@@ -367,9 +363,9 @@ private fun WorkforceTableRow(
             .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Rol label
+        // Equipo label
         Text(
-            text = rol,
+            text = equipo,
             modifier = Modifier
                 .weight(1.8f)
                 .padding(start = 8.dp),
@@ -445,7 +441,7 @@ private fun WorkforceTableRow(
 }
 
 @Composable
-private fun WorkforceTotalsRow(
+private fun MachineryTotalsRow(
     totalCantidad: Int,
     totalHoras: Double
 ) {

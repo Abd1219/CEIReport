@@ -43,6 +43,12 @@ data class Report(
     @ColumnInfo(defaultValue = "")
     val fuerzaTrabajoHoras: List<String> = emptyList(),     // 10 valores, uno por rol
 
+    // ── Pantalla 5: Maquinaria Utilizada ───────────────────────────────────
+    @ColumnInfo(defaultValue = "")
+    val maquinariaCantidades: List<String> = emptyList(),   // 7 valores, uno por equipo
+    @ColumnInfo(defaultValue = "")
+    val maquinariaHoras: List<String> = emptyList(),       // 7 valores, uno por equipo
+
     // ── Campos generales existentes ──────────────────────────────────────────
     val title: String = "",
     val date: String = "",

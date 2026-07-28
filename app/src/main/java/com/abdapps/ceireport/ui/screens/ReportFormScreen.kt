@@ -100,7 +100,7 @@ fun ReportFormScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 5 de 5 — Evidencias y Firma",
+                            text = "Paso 6 de 6 — Evidencias y Firma",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -180,7 +180,7 @@ fun ReportFormScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo
-            StepProgressBar(currentStep = 5, totalSteps = 5)
+            StepProgressBar(currentStep = 6, totalSteps = 6)
 
             // ── SECCIÓN 1: EVIDENCIAS FOTOGRÁFICAS ──────────────────────────
             FormCard(title = "Evidencias Fotográficas") {

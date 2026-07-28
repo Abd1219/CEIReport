@@ -63,7 +63,7 @@ fun ActivitiesObservationsScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 3 de 5 — Registro de Trabajo",
+                            text = "Paso 3 de 6 — Registro de Trabajo",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -134,7 +134,7 @@ fun ActivitiesObservationsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo (Paso 3 de 5)
-            StepProgressBar(currentStep = 3, totalSteps = 5)
+            StepProgressBar(currentStep = 3, totalSteps = 6)
 
             // ── SECCIÓN 1: ACTIVIDADES REALIZADAS ───────────────────────────
             FormCard(title = "Actividades Realizadas") {
