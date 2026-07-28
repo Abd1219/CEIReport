@@ -9,19 +9,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Draw
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,11 +29,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
-import com.abdapps.ceireport.data.model.Report
 import com.abdapps.ceireport.ui.components.SignaturePad
+import com.abdapps.ceireport.ui.theme.*
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 import java.io.File
 
@@ -60,7 +58,6 @@ fun ReportFormScreen(
         uri?.let { viewModel.addPhotoToReport(context, it) }
     }
 
-    // Camera launcher setup
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
@@ -84,14 +81,29 @@ fun ReportFormScreen(
     }
 
     Scaffold(
+        containerColor = AppBackground,
         topBar = {
             TopAppBar(
-                title = { Text(if (report.id == 0L) "Nuevo Reporte" else "Editar Reporte") },
+                title = {
+                    Column {
+                        Text(
+                            text = if (report.id == 0L) "Nuevo Reporte" else "Editar Reporte",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Paso 3 de 3 — Evidencias y Firma",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         viewModel.saveDraft { onNavigateBack() }
                     }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
                 actions = {
@@ -100,14 +112,58 @@ fun ReportFormScreen(
                             Toast.makeText(context, "Borrador guardado", Toast.LENGTH_SHORT).show()
                         }
                     }) {
-                        Icon(Icons.Default.Save, contentDescription = "Guardar Borrador")
+                        Icon(Icons.Default.Save, contentDescription = "Guardar Borrador", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = HeaderBlue
                 )
             )
+        },
+        bottomBar = {
+            Surface(
+                color = Color.White,
+                shadowElevation = 12.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.saveDraft { onNavigateBack() } },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Anterior")
+                    }
+
+                    Button(
+                        onClick = {
+                            if (report.proyecto.isEmpty() && report.title.isEmpty()) {
+                                Toast.makeText(context, "Por favor indica el nombre o proyecto", Toast.LENGTH_SHORT).show()
+                            } else {
+                                viewModel.finalizeReport(context) { excelFile, pdfFile ->
+                                    Toast.makeText(context, "Reportes generados con éxito", Toast.LENGTH_SHORT).show()
+                                    shareFiles(context, excelFile, pdfFile)
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Finalizar y Compartir", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     ) { padding ->
         Column(
@@ -115,173 +171,178 @@ fun ReportFormScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Fields
-            OutlinedTextField(
-                value = report.title,
-                onValueChange = { viewModel.updateCurrentReport { r -> r.copy(title = it) } },
-                label = { Text("Título del Reporte") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Barra de progreso del flujo
+            StepProgressBar(currentStep = 3, totalSteps = 3)
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = report.date,
-                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(date = it) } },
-                    label = { Text("Fecha (dd/mm/aaaa)") },
-                    modifier = Modifier.weight(1f)
+            // ── SECCIÓN 1: ACTIVIDADES Y OBSERVACIONES ──────────────────────
+            FormCard(title = "Actividades y Observaciones") {
+                StyledTextField(
+                    value = report.title,
+                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(title = it) } },
+                    label = "Título / Resumen Corto del Reporte"
                 )
 
                 OutlinedTextField(
-                    value = report.location,
-                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(location = it) } },
-                    label = { Text("Ubicación") },
-                    modifier = Modifier.weight(1.2f)
+                    value = report.description,
+                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(description = it) } },
+                    label = { Text("Descripción de Actividades Realizadas") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = textFieldColors(),
+                    minLines = 3,
+                    maxLines = 6
+                )
+
+                OutlinedTextField(
+                    value = report.observations,
+                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(observations = it) } },
+                    label = { Text("Observaciones / Notas de Campo") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = textFieldColors(),
+                    minLines = 2,
+                    maxLines = 5
                 )
             }
 
-            OutlinedTextField(
-                value = report.technicianName,
-                onValueChange = { viewModel.updateCurrentReport { r -> r.copy(technicianName = it) } },
-                label = { Text("Técnico Responsable") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            // ── SECCIÓN 2: EVIDENCIAS FOTOGRÁFICAS ──────────────────────────
+            FormCard(title = "Evidencias Fotográficas") {
+                Text(
+                    text = "Adjunta fotografías tomadas en campo para incluir en el reporte PDF/Excel:",
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
 
-            OutlinedTextField(
-                value = report.description,
-                onValueChange = { viewModel.updateCurrentReport { r -> r.copy(description = it) } },
-                label = { Text("Descripción de Actividades") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-
-            OutlinedTextField(
-                value = report.observations,
-                onValueChange = { viewModel.updateCurrentReport { r -> r.copy(observations = it) } },
-                label = { Text("Observaciones") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
-            )
-
-            Divider()
-
-            // Photos Section
-            Text("Evidencias Fotográficas", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { launchCamera() },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Cámara")
-                }
+                    Button(
+                        onClick = { launchCamera() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Cámara")
+                    }
 
-                Button(
-                    onClick = { galleryLauncher.launch("image/*") },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Icon(Icons.Default.PhotoLibrary, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Galería")
-                }
-            }
-
-            if (report.photos.isNotEmpty()) {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(report.photos) { path ->
-                        Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                        ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(model = File(path)),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                    OutlinedButton(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = HeaderBlue)
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Galería")
                     }
                 }
-            } else {
-                Text(
-                    "Ninguna fotografía adjuntada",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
+
+                if (report.photos.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(report.photos) { path ->
+                            Box(
+                                modifier = Modifier
+                                    .size(130.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(14.dp))
+                            ) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(model = File(path)),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                // Botón eliminar foto
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(6.dp)
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .clickable {
+                                            val updated = report.photos.toMutableList().apply { remove(path) }
+                                            viewModel.updateCurrentReport { r -> r.copy(photos = updated) }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Eliminar",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFFF8FAFC))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No se han adjuntado fotos aún",
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
             }
 
-            Divider()
-
-            // Signature Section
-            Text("Firma del Técnico", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            
-            Button(
-                onClick = { showSignatureDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Icon(Icons.Default.Draw, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (report.signaturePath.isNullOrEmpty()) "Dibujar Firma" else "Modificar Firma")
-            }
-
-            if (!report.signaturePath.isNullOrEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .width(200.dp)
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                        .background(Color.White),
-                    contentAlignment = Alignment.Center
+            // ── SECCIÓN 3: FIRMA DIGITAL ─────────────────────────────────────
+            FormCard(title = "Firma del Responsable") {
+                Button(
+                    onClick = { showSignatureDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(model = File(report.signaturePath)),
-                        contentDescription = "Firma guardada",
-                        modifier = Modifier.fillMaxSize()
+                    Icon(Icons.Default.Draw, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (report.signaturePath.isNullOrEmpty()) "Dibujar Firma Digital" else "Modificar Firma",
+                        fontWeight = FontWeight.Bold
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Actions: Export & Share
-            Button(
-                onClick = {
-                    if (report.title.isEmpty() || report.technicianName.isEmpty()) {
-                        Toast.makeText(context, "Por favor complete el título y nombre del técnico", Toast.LENGTH_SHORT).show()
-                    } else {
-                        viewModel.finalizeReport(context) { excelFile, pdfFile ->
-                            Toast.makeText(context, "Reportes generados con éxito", Toast.LENGTH_SHORT).show()
-                            shareFiles(context, excelFile, pdfFile)
-                        }
+                if (!report.signaturePath.isNullOrEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(14.dp))
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = File(report.signaturePath)),
+                            contentDescription = "Firma guardada",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Share, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Generar y Compartir (Excel/PDF)", style = MaterialTheme.typography.titleMedium)
+                }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -309,7 +370,7 @@ private fun shareFiles(context: Context, excelFile: File, pdfFile: File) {
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir Reportes"))
+        context.startActivity(Intent.createChooser(intent, "Compartir Reportes (PDF y Excel)"))
     } catch (e: Exception) {
         Toast.makeText(context, "Error al compartir archivos", Toast.LENGTH_SHORT).show()
         e.printStackTrace()

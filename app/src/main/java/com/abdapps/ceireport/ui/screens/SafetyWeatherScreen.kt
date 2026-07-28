@@ -1,6 +1,7 @@
 package com.abdapps.ceireport.ui.screens
 
-import androidx.compose.animation.*
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.widget.Toast
+import com.abdapps.ceireport.ui.theme.*
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 
 // ── Tipos de clima disponibles ────────────────────────────────────────────────
@@ -56,20 +57,25 @@ fun SafetyWeatherScreen(
     val report = reportState ?: return
     val scrollState = rememberScrollState()
 
-    // ── Estado del diálogo de agregar actividad ───────────────────────────────
     var showAddDialog by remember { mutableStateOf(false) }
     var nuevaActividad by remember { mutableStateOf("") }
 
     Scaffold(
+        containerColor = AppBackground,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Seguridad y Clima", fontWeight = FontWeight.Bold)
                         Text(
-                            text = "Pantalla 2 de 4",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            text = "Seguridad y Clima",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Paso 2 de 3 — Condiciones de Campo",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
                         )
                     }
                 },
@@ -77,7 +83,7 @@ fun SafetyWeatherScreen(
                     IconButton(onClick = {
                         viewModel.saveDraft { onNavigateBack() }
                     }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
                 actions = {
@@ -86,41 +92,46 @@ fun SafetyWeatherScreen(
                             Toast.makeText(context, "Borrador guardado", Toast.LENGTH_SHORT).show()
                         }
                     }) {
-                        Icon(Icons.Default.Save, contentDescription = "Guardar Borrador")
+                        Icon(Icons.Default.Save, contentDescription = "Guardar Borrador", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = HeaderBlue
                 )
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
+            Surface(
+                color = Color.White,
+                shadowElevation = 12.dp
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = { viewModel.saveDraft { onNavigateBack() } },
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
                     ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null,
-                            modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Anterior")
                     }
+
                     Button(
                         onClick = { onNavigateNext() },
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                        shape = RoundedCornerShape(14.dp),
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                     ) {
-                        Text("Siguiente")
+                        Text("Siguiente", fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.Default.ArrowForward, contentDescription = null,
-                            modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -131,20 +142,14 @@ fun SafetyWeatherScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Barra de progreso del flujo
+            StepProgressBar(currentStep = 2, totalSteps = 3)
 
-            // ══════════════════════════════════════════════════════════════════
-            // SECCIÓN 1: SEGURIDAD
-            // ══════════════════════════════════════════════════════════════════
-            SectionCard(
-                icon = Icons.Default.Security,
-                iconColor = Color(0xFF16A34A),
-                title = "Actividades de Seguridad",
-                subtitle = "Registra las acciones de seguridad realizadas en campo"
-            ) {
-                // Lista de actividades existentes
+            // ── SECCIÓN 1: SEGURIDAD ─────────────────────────────────────────
+            FormCard(title = "Actividades de Seguridad") {
                 AnimatedVisibility(visible = report.actividadesSeguridad.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         report.actividadesSeguridad.forEachIndexed { index, actividad ->
@@ -161,48 +166,41 @@ fun SafetyWeatherScreen(
                                 }
                             )
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
 
-                // Mensaje vacío
                 AnimatedVisibility(visible = report.actividadesSeguridad.isEmpty()) {
                     Text(
-                        text = "No hay actividades registradas.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        text = "No hay actividades de seguridad registradas aún.",
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
 
-                // Botón agregar
                 Button(
                     onClick = {
                         nuevaActividad = ""
                         showAddDialog = true
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF16A34A)
-                    ),
-                    shape = RoundedCornerShape(10.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Agregar Actividad de Seguridad")
+                    Text("Agregar Actividad de Seguridad", fontWeight = FontWeight.Bold)
                 }
             }
 
-            // ══════════════════════════════════════════════════════════════════
-            // SECCIÓN 2: CLIMA
-            // ══════════════════════════════════════════════════════════════════
-            SectionCard(
-                icon = Icons.Default.WbSunny,
-                iconColor = Color(0xFFF59E0B),
-                title = "Condiciones Climáticas en Campo",
-                subtitle = "Selecciona el clima durante la jornada (puedes elegir varios)"
-            ) {
-                // Grid de clima 3 columnas
+            // ── SECCIÓN 2: CLIMA ─────────────────────────────────────────────
+            FormCard(title = "Condiciones Climáticas en Campo") {
+                Text(
+                    text = "Selecciona las condiciones observadas durante la jornada:",
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
+
                 val rows = CLIMAS.chunked(3)
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     rows.forEach { rowItems ->
@@ -226,7 +224,6 @@ fun SafetyWeatherScreen(
                                     }
                                 )
                             }
-                            // Rellena si la fila tiene menos de 3 elementos
                             repeat(3 - rowItems.size) {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
@@ -234,7 +231,6 @@ fun SafetyWeatherScreen(
                     }
                 }
 
-                // Resumen de selección
                 AnimatedVisibility(visible = report.clima.isNotEmpty()) {
                     val seleccionados = CLIMAS
                         .filter { report.clima.contains(it.id) }
@@ -242,25 +238,26 @@ fun SafetyWeatherScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                            .padding(top = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = HeaderBlue.copy(alpha = 0.08f)
                     ) {
                         Text(
-                            text = "Seleccionado: $seleccionados",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(10.dp)
+                            text = "Clima seleccionado: $seleccionados",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = HeaderBlue,
+                            modifier = Modifier.padding(12.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // ── Diálogo: Agregar actividad de seguridad ───────────────────────────────
+    // Diálogo: Agregar actividad de seguridad
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -277,12 +274,13 @@ fun SafetyWeatherScreen(
                 OutlinedTextField(
                     value = nuevaActividad,
                     onValueChange = { nuevaActividad = it },
-                    label = { Text("Describe la actividad") },
-                    placeholder = { Text("Ej: Charla de 5 minutos sobre EPP") },
+                    label = { Text("Descripción de la actividad") },
+                    placeholder = { Text("Ej: Platica de 5 min sobre EPP") },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = textFieldColors(),
                     minLines = 2,
-                    maxLines = 4,
-                    singleLine = false
+                    maxLines = 4
                 )
             },
             confirmButton = {
@@ -300,7 +298,8 @@ fun SafetyWeatherScreen(
                         showAddDialog = false
                         nuevaActividad = ""
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Agregar")
                 }
@@ -314,53 +313,6 @@ fun SafetyWeatherScreen(
     }
 }
 
-// ── Componente: tarjeta de sección ────────────────────────────────────────────
-@Composable
-private fun SectionCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconColor: Color,
-    title: String,
-    subtitle: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Encabezado de sección
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(iconColor.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = null, tint = iconColor,
-                        modifier = Modifier.size(20.dp))
-                }
-                Column {
-                    Text(title, fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium)
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                }
-            }
-            HorizontalDivider()
-            content()
-        }
-    }
-}
-
-// ── Componente: fila de actividad de seguridad ────────────────────────────────
 @Composable
 private fun ActividadItem(
     numero: Int,
@@ -370,13 +322,13 @@ private fun ActividadItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF8FAFC))
+            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Número de ítem
         Box(
             modifier = Modifier
                 .size(26.dp)
@@ -394,23 +346,23 @@ private fun ActividadItem(
         Text(
             text = texto,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
+            fontSize = 14.sp,
+            color = TextPrimary
         )
         IconButton(
             onClick = onDelete,
             modifier = Modifier.size(32.dp)
         ) {
             Icon(
-                Icons.Default.DeleteOutline,
+                Icons.Default.Delete,
                 contentDescription = "Eliminar",
-                tint = MaterialTheme.colorScheme.error,
+                tint = StatusPendingIcon,
                 modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
-// ── Componente: tarjeta de condición climática ────────────────────────────────
 @Composable
 private fun ClimaCard(
     opcion: ClimaOpcion,
@@ -418,21 +370,17 @@ private fun ClimaCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isSelected)
-        opcion.color.copy(alpha = 0.15f)
-    else
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-
-    val borderColor = if (isSelected) opcion.color else Color.Transparent
+    val bgColor = if (isSelected) opcion.color.copy(alpha = 0.15f) else Color(0xFFF8FAFC)
+    val borderColor = if (isSelected) opcion.color else Color(0xFFE2E8F0)
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(bgColor)
             .border(
-                width = if (isSelected) 2.dp else 0.dp,
+                width = if (isSelected) 2.dp else 1.dp,
                 color = borderColor,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
             .padding(vertical = 12.dp, horizontal = 4.dp),
@@ -445,10 +393,9 @@ private fun ClimaCard(
             Text(text = opcion.emoji, fontSize = 28.sp)
             Text(
                 text = opcion.label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) opcion.color
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) opcion.color else TextSecondary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 14.sp
             )

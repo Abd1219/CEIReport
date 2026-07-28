@@ -23,10 +23,10 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 // ── Colores del splash ────────────────────────────────────────────────────────
-private val SplashBgTop    = Color(0xFF1A237E)   // azul marino oscuro
-private val SplashBgBottom = Color(0xFF0D1B6E)   // azul marino más oscuro
-private val SplashGlow     = Color(0xFF3D5AF1)   // azul brillante decorativo
-private val OrangeBadge    = Color(0xFFE8631A)   // naranja del badge
+private val SplashBgTop    = Color(0xFF234499)   // HeaderBlueDark
+private val SplashBgBottom = Color(0xFF193275)   // Azul marino profundo
+private val SplashGlow     = Color(0xFF3461C7)   // HeaderBlue
+private val OrangeBadge    = Color(0xFFEA5B29)   // AccentOrange
 
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {

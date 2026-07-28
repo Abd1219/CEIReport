@@ -20,11 +20,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Room schema export path (required for AutoMigration)
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
-        }
     }
 
     buildTypes {
@@ -49,6 +44,11 @@ android {
             excludes += "/META-INF/MSFTSIG*"
         }
     }
+}
+
+// Room schema export path (required for AutoMigration)
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
