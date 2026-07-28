@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -49,7 +50,13 @@ fun ReportFormScreen(
     val report = reportState ?: return
 
     var showSignatureDialog by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+
+    // Interceptar botón atrás nativo del dispositivo
+    BackHandler {
+        showExitDialog = true
+    }
 
     // Activity Result Launchers
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -100,9 +107,7 @@ fun ReportFormScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.saveDraft { onNavigateBack() }
-                    }) {
+                    IconButton(onClick = { showExitDialog = true }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -134,7 +139,7 @@ fun ReportFormScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.saveDraft { onNavigateBack() } },
+                        onClick = { onNavigateBack() },
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
                     ) {
@@ -356,6 +361,23 @@ fun ReportFormScreen(
                 onDismiss = { showSignatureDialog = false }
             )
         }
+    }
+
+    // Diálogo de confirmación para salir/retroceder
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            onDismiss = { showExitDialog = false },
+            onSaveDraft = {
+                viewModel.saveDraft {
+                    showExitDialog = false
+                    onNavigateBack()
+                }
+            },
+            onDiscard = {
+                showExitDialog = false
+                onNavigateBack()
+            }
+        )
     }
 }
 

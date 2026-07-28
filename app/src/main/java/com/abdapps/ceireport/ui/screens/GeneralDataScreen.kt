@@ -2,8 +2,8 @@ package com.abdapps.ceireport.ui.screens
 
 import android.app.DatePickerDialog
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +39,13 @@ fun GeneralDataScreen(
     val report = reportState ?: return
     val scrollState = rememberScrollState()
 
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Interceptar botón atrás nativo del dispositivo
+    BackHandler {
+        showExitDialog = true
+    }
+
     // ── DatePicker ────────────────────────────────────────────────────────────
     val calendar = Calendar.getInstance()
     val datePickerDialog = DatePickerDialog(
@@ -72,9 +79,7 @@ fun GeneralDataScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.saveDraft { onNavigateBack() }
-                    }) {
+                    IconButton(onClick = { showExitDialog = true }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -106,11 +111,11 @@ fun GeneralDataScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.saveDraft { onNavigateBack() } },
+                        onClick = { showExitDialog = true },
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
                     ) {
-                        Text("Guardar Borrador")
+                        Text("Regresar")
                     }
 
                     Button(
@@ -143,7 +148,7 @@ fun GeneralDataScreen(
                 StyledTextField(
                     value = report.proyecto,
                     onValueChange = { viewModel.updateCurrentReport { r -> r.copy(proyecto = it) } },
-                    label = "Proyecto"
+                    label = "Nombre del Proyecto"
                 )
 
                 Row(
@@ -234,9 +239,78 @@ fun GeneralDataScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+
+    // Diálogo de confirmación para salir/retroceder
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            onDismiss = { showExitDialog = false },
+            onSaveDraft = {
+                viewModel.saveDraft {
+                    showExitDialog = false
+                    onNavigateBack()
+                }
+            },
+            onDiscard = {
+                showExitDialog = false
+                onNavigateBack()
+            }
+        )
+    }
 }
 
 // ── COMPONENTES REUTILIZABLES PARA FORMULARIOS ────────────────────────────────
+
+@Composable
+fun ExitConfirmationDialog(
+    onDismiss: () -> Unit,
+    onSaveDraft: () -> Unit,
+    onDiscard: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Save,
+                contentDescription = null,
+                tint = HeaderBlue,
+                modifier = Modifier.size(28.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "¿Deseas guardar tu progreso?",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                text = "Tienes cambios en este reporte. Puedes guardarlo como borrador para continuar más tarde o salir sin guardar.",
+                fontSize = 14.sp,
+                color = TextSecondary
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onSaveDraft,
+                colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Guardar borrador")
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onDiscard) {
+                    Text("Salir sin guardar", color = StatusPendingIcon)
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancelar")
+                }
+            }
+        }
+    )
+}
 
 @Composable
 fun StepProgressBar(currentStep: Int, totalSteps: Int) {

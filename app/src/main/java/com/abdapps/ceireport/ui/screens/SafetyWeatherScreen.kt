@@ -1,6 +1,7 @@
 package com.abdapps.ceireport.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,6 +60,12 @@ fun SafetyWeatherScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var nuevaActividad by remember { mutableStateOf("") }
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Interceptar botón atrás nativo del dispositivo
+    BackHandler {
+        showExitDialog = true
+    }
 
     Scaffold(
         containerColor = AppBackground,
@@ -80,9 +87,7 @@ fun SafetyWeatherScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.saveDraft { onNavigateBack() }
-                    }) {
+                    IconButton(onClick = { showExitDialog = true }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -114,7 +119,7 @@ fun SafetyWeatherScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.saveDraft { onNavigateBack() } },
+                        onClick = { onNavigateBack() },
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
                     ) {
@@ -275,7 +280,7 @@ fun SafetyWeatherScreen(
                     value = nuevaActividad,
                     onValueChange = { nuevaActividad = it },
                     label = { Text("Descripción de la actividad") },
-                    placeholder = { Text("Ej: Platica de 5 min sobre EPP") },
+                    placeholder = { Text("Ej: Plática de 5 min sobre EPP") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = textFieldColors(),
@@ -308,6 +313,23 @@ fun SafetyWeatherScreen(
                 TextButton(onClick = { showAddDialog = false }) {
                     Text("Cancelar")
                 }
+            }
+        )
+    }
+
+    // Diálogo de confirmación para salir/retroceder
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            onDismiss = { showExitDialog = false },
+            onSaveDraft = {
+                viewModel.saveDraft {
+                    showExitDialog = false
+                    onNavigateBack()
+                }
+            },
+            onDiscard = {
+                showExitDialog = false
+                onNavigateBack()
             }
         )
     }

@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,6 +29,7 @@ import com.abdapps.ceireport.data.model.Report
 import com.abdapps.ceireport.ui.theme.*
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -43,24 +43,29 @@ fun ReportListScreen(
     var showDeleteDialog by remember { mutableStateOf<Report?>(null) }
     var filterFilterText by remember { mutableStateOf("") }
 
-    // Fechas e información del usuario
+    // Fecha actual formateada en español
     val currentDateFormatted = remember {
         val localeEs = Locale.forLanguageTag("es")
         val format = SimpleDateFormat("EEEE, d 'de' MMMM 'de' yyyy", localeEs)
         format.format(Date()).replaceFirstChar { if (it.isLowerCase()) it.titlecase(localeEs) else it.toString() }
     }
 
-    // Reporte activo o más reciente para mostrar en la cabecera
-    val activeReport = reports.firstOrNull { it.isDraft } ?: reports.firstOrNull()
-    val activeProjectName = activeReport?.proyecto?.ifEmpty { null }
-        ?: activeReport?.title?.ifEmpty { null }
-        ?: "Ampliación Red Eléctrica — Zona Norte"
-    val technicianName = reports.firstOrNull { it.technicianName.isNotEmpty() }?.technicianName
-        ?.ifEmpty { "Juan Pérez" } ?: "Juan Pérez"
+    // Saludo dinámico según horario
+    val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
+    val greetingText = remember(currentHour) {
+        when (currentHour) {
+            in 5..11 -> "¡Buenos días! ☀️"
+            in 12..18 -> "¡Buenas tardes! 🌤️"
+            else -> "¡Buenas noches! 🌙"
+        }
+    }
+
+    // Reporte en borrador/inconcluso para reanudar directamente
+    val activeDraftReport = reports.firstOrNull { it.isDraft }
 
     val draftCount = reports.count { it.isDraft }
     val completedCount = reports.count { !it.isDraft }
-    val pendingCount = if (draftCount > 0) draftCount else 2
+    val pendingCount = draftCount
 
     val filteredReports = remember(reports, filterFilterText, selectedTab) {
         if (filterFilterText.isBlank()) {
@@ -98,18 +103,26 @@ fun ReportListScreen(
                         // 1. Cabecera Azul de Marca
                         item {
                             HeaderSection(
-                                technicianName = technicianName,
+                                greetingText = greetingText,
                                 currentDate = currentDateFormatted,
-                                activeProjectName = activeProjectName
+                                activeDraftReport = activeDraftReport,
+                                onSelectActiveReport = { report ->
+                                    viewModel.selectReport(report)
+                                    onNavigateToForm()
+                                },
+                                onCreateNewReport = {
+                                    viewModel.createNewReport()
+                                    onNavigateToForm()
+                                }
                             )
                         }
 
-                        // 2. Tarjetas de Resumen EstADÍSTICO
+                        // 2. Tarjetas de Resumen Estadístico
                         item {
                             Spacer(modifier = Modifier.height(16.dp))
                             SummaryCardsRow(
                                 draftCount = draftCount,
-                                completedCount = if (completedCount > 0) completedCount else 14,
+                                completedCount = completedCount,
                                 pendingCount = pendingCount
                             )
                         }
@@ -248,7 +261,7 @@ fun ReportListScreen(
                 }
 
                 2 -> {
-                    // ── PANTALLA: AJUSTES & PERFIL ────────────────────────────────────
+                    // ── PANTALLA: AJUSTES ────────────────────────────────────────────
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -262,7 +275,7 @@ fun ReportListScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Tarjeta de Perfil
+                        // Tarjeta de Información
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
@@ -270,33 +283,33 @@ fun ReportListScreen(
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(18.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(60.dp)
+                                        .size(54.dp)
                                         .clip(CircleShape)
                                         .background(HeaderBlueLight),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Person,
+                                        imageVector = Icons.Default.Business,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(28.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column {
                                     Text(
-                                        text = technicianName,
+                                        text = "CEI Reportes de Obra",
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary
                                     )
                                     Text(
-                                        text = "Técnico Inspector CEI",
+                                        text = "Sistema de Control e Inspección",
                                         fontSize = 13.sp,
                                         color = TextSecondary
                                     )
@@ -306,10 +319,9 @@ fun ReportListScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Opciones de configuración
                         SettingsOptionItem(icon = Icons.Default.Business, title = "Empresa", subtitle = "Constructora CEI S.A. de C.V.")
                         Spacer(modifier = Modifier.height(10.dp))
-                        SettingsOptionItem(icon = Icons.Default.Folder, title = "Exportación de Reportes", subtitle = "Formato PDF / Excel")
+                        SettingsOptionItem(icon = Icons.Default.Folder, title = "Exportación de Reportes", subtitle = "Formatos autorizados PDF / Excel (.xlsx)")
                         Spacer(modifier = Modifier.height(10.dp))
                         SettingsOptionItem(icon = Icons.Default.Info, title = "Acerca de la Aplicación", subtitle = "Versión 1.0.0 (AbdApps)")
                     }
@@ -348,9 +360,11 @@ fun ReportListScreen(
 // ── COMPONENTE: Cabecera Azul de la Aplicación ──────────────────────────────
 @Composable
 private fun HeaderSection(
-    technicianName: String,
+    greetingText: String,
     currentDate: String,
-    activeProjectName: String
+    activeDraftReport: Report?,
+    onSelectActiveReport: (Report) -> Unit,
+    onCreateNewReport: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -365,55 +379,40 @@ private fun HeaderSection(
             .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
         Column {
-            // Saludo + Usuario + Avatar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Text(
-                        text = "Buenos días 👷",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = technicianName,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = currentDate,
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.75f)
-                    )
-                }
-
-                // Avatar circular
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .clickable { },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Perfil",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+            // Saludo dinámico + Fecha
+            Column {
+                Text(
+                    text = greetingText,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = currentDate,
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Tarjeta de PROYECTO ACTIVO
+            // Tarjeta de PROYECTO ACTIVO (dinámica)
+            val hasActiveDraft = activeDraftReport != null
+            val projectNameText = if (hasActiveDraft) {
+                activeDraftReport!!.proyecto.ifEmpty {
+                    activeDraftReport.title.ifEmpty { "Reporte en borrador sin título" }
+                }
+            } else {
+                "No hay proyectos activos"
+            }
+
+            val subtitleText = if (hasActiveDraft) {
+                "Toca para continuar la edición (${activeDraftReport!!.date})"
+            } else {
+                "Inicia un nuevo reporte para comenzar"
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -424,6 +423,13 @@ private fun HeaderSection(
                         color = Color.White.copy(alpha = 0.25f),
                         shape = RoundedCornerShape(20.dp)
                     )
+                    .clickable {
+                        if (hasActiveDraft) {
+                            onSelectActiveReport(activeDraftReport!!)
+                        } else {
+                            onCreateNewReport()
+                        }
+                    }
                     .padding(16.dp)
             ) {
                 Row(
@@ -441,26 +447,34 @@ private fun HeaderSection(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = activeProjectName,
-                            fontSize = 15.sp,
+                            text = projectNameText,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = subtitleText,
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.75f),
+                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    // Badge "ACTIVO"
+                    // Badge "ACTIVO" o "SIN PROYECTO"
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(AccentOrange)
+                            .background(if (hasActiveDraft) AccentOrange else Color.White.copy(alpha = 0.2f))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "ACTIVO",
+                            text = if (hasActiveDraft) "EN CURSO" else "SIN PROYECTO",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -492,18 +506,18 @@ private fun SummaryCardsRow(
             icon = Icons.Default.Description,
             iconBg = StatusDraftBg,
             iconTint = StatusDraftIcon,
-            title = if (draftCount > 0) "$draftCount" else "Borrador",
-            subtitle = if (draftCount > 0) "Borradores" else "Hoy"
+            title = "$draftCount",
+            subtitle = "Borradores"
         )
 
-        // Card 2: Enviado / Completados
+        // Card 2: Completados
         StatCard(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.CheckCircle,
             iconBg = StatusSentBg,
             iconTint = StatusSentIcon,
             title = "$completedCount",
-            subtitle = "Este mes"
+            subtitle = "Completados"
         )
 
         // Card 3: Pendientes
@@ -554,7 +568,7 @@ private fun StatCard(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = title,
-                fontSize = 17.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
@@ -586,7 +600,6 @@ private fun NewReportBanner(onClick: () -> Unit) {
                 .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Contenedor de ícono con documento + plus
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -667,7 +680,6 @@ private fun RecentReportCard(
                     letterSpacing = 0.5.sp
                 )
 
-                // Badge Estado
                 val badgeBg = if (report.isDraft) StatusDraftBg else StatusSentBg
                 val badgeText = if (report.isDraft) StatusDraftText else StatusSentText
                 val label = if (report.isDraft) "Borrador" else "Enviado"
@@ -690,7 +702,7 @@ private fun RecentReportCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = report.proyecto.ifEmpty { report.title.ifEmpty { "Ampliación Red Eléctrica — Zona Norte" } },
+                text = report.proyecto.ifEmpty { report.title.ifEmpty { "Reporte de Campo sin Título" } },
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -714,7 +726,7 @@ private fun RecentReportCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = report.date.ifEmpty { "27 Jul 2025" },
+                        text = report.date.ifEmpty { "Sin fecha" },
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
