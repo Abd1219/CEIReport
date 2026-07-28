@@ -15,11 +15,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.abdapps.ceireport.data.local.ReportDatabase
 import com.abdapps.ceireport.data.repository.ReportRepository
+import com.abdapps.ceireport.ui.screens.ActivitiesObservationsScreen
 import com.abdapps.ceireport.ui.screens.GeneralDataScreen
 import com.abdapps.ceireport.ui.screens.ReportFormScreen
 import com.abdapps.ceireport.ui.screens.ReportListScreen
 import com.abdapps.ceireport.ui.screens.SafetyWeatherScreen
 import com.abdapps.ceireport.ui.screens.SplashScreen
+import com.abdapps.ceireport.ui.screens.WorkforceScreen
 import com.abdapps.ceireport.ui.theme.CEIReportTheme
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModelFactory
@@ -70,14 +72,30 @@ class MainActivity : ComponentActivity() {
                             SafetyWeatherScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { currentScreen = "generalData" },
+                                onNavigateNext = { currentScreen = "activities" }
+                            )
+                        }
+                        // ── Pantalla 3: Actividades Realizadas y Observaciones ──
+                        "activities" -> {
+                            ActivitiesObservationsScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { currentScreen = "safety" },
+                                onNavigateNext = { currentScreen = "workforce" }
+                            )
+                        }
+                        // ── Pantalla 4: Fuerza de Trabajo ────────────────────────
+                        "workforce" -> {
+                            WorkforceScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { currentScreen = "activities" },
                                 onNavigateNext = { currentScreen = "form" }
                             )
                         }
-                        // ── Pantalla 3+: Formulario (actividades, fotos, firma) ─
+                        // ── Pantalla 5: Evidencias Fotográficas y Firma ──────
                         "form" -> {
                             ReportFormScreen(
                                 viewModel = viewModel,
-                                onNavigateBack = { currentScreen = "safety" }
+                                onNavigateBack = { currentScreen = "workforce" }
                             )
                         }
                     }

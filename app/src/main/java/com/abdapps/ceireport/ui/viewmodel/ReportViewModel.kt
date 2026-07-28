@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abdapps.ceireport.data.excel.ExcelGenerator
 import com.abdapps.ceireport.data.model.Report
-import com.abdapps.ceireport.data.pdf.PdfGenerator
 import com.abdapps.ceireport.data.repository.ReportRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -94,7 +93,7 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
         }
     }
 
-    fun finalizeReport(context: Context, onComplete: (excelFile: File, pdfFile: File) -> Unit) {
+    fun finalizeReport(context: Context, onComplete: (excelFile: File) -> Unit) {
         val report = _currentReport.value ?: return
         viewModelScope.launch {
             val finalizedReport = report.copy(isDraft = false)
@@ -106,10 +105,9 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
                 _currentReport.value = finalizedReport
             }
 
-            // Generate files
+            // Generar solo Excel
             val excelFile = ExcelGenerator.generate(context, _currentReport.value!!)
-            val pdfFile = PdfGenerator.generate(context, _currentReport.value!!)
-            onComplete(excelFile, pdfFile)
+            onComplete(excelFile)
         }
     }
 

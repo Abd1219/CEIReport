@@ -72,7 +72,7 @@ fun GeneralDataScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 1 de 3 — Identificación",
+                            text = "Paso 1 de 5 — Identificación",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -141,7 +141,7 @@ fun GeneralDataScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo
-            StepProgressBar(currentStep = 1, totalSteps = 3)
+            StepProgressBar(currentStep = 1, totalSteps = 5)
 
             // ── Sección 1: Identificación del Proyecto ──────────────────────────
             FormCard(title = "Identificación del Proyecto") {

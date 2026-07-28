@@ -100,7 +100,7 @@ fun ReportFormScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 3 de 3 — Evidencias y Firma",
+                            text = "Paso 5 de 5 — Evidencias y Firma",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -153,9 +153,9 @@ fun ReportFormScreen(
                             if (report.proyecto.isEmpty() && report.title.isEmpty()) {
                                 Toast.makeText(context, "Por favor indica el nombre o proyecto", Toast.LENGTH_SHORT).show()
                             } else {
-                                viewModel.finalizeReport(context) { excelFile, pdfFile ->
-                                    Toast.makeText(context, "Reportes generados con éxito", Toast.LENGTH_SHORT).show()
-                                    shareFiles(context, excelFile, pdfFile)
+                                viewModel.finalizeReport(context) { excelFile ->
+                                    Toast.makeText(context, "Reporte Excel generado con éxito", Toast.LENGTH_SHORT).show()
+                                    shareExcel(context, excelFile)
                                 }
                             }
                         },
@@ -165,7 +165,7 @@ fun ReportFormScreen(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Finalizar y Compartir", fontWeight = FontWeight.Bold)
+                        Text("Finalizar y Compartir Excel", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -180,43 +180,12 @@ fun ReportFormScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo
-            StepProgressBar(currentStep = 3, totalSteps = 3)
+            StepProgressBar(currentStep = 5, totalSteps = 5)
 
-            // ── SECCIÓN 1: ACTIVIDADES Y OBSERVACIONES ──────────────────────
-            FormCard(title = "Actividades y Observaciones") {
-                StyledTextField(
-                    value = report.title,
-                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(title = it) } },
-                    label = "Título / Resumen Corto del Reporte"
-                )
-
-                OutlinedTextField(
-                    value = report.description,
-                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(description = it) } },
-                    label = { Text("Descripción de Actividades Realizadas") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = textFieldColors(),
-                    minLines = 3,
-                    maxLines = 6
-                )
-
-                OutlinedTextField(
-                    value = report.observations,
-                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(observations = it) } },
-                    label = { Text("Observaciones / Notas de Campo") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = textFieldColors(),
-                    minLines = 2,
-                    maxLines = 5
-                )
-            }
-
-            // ── SECCIÓN 2: EVIDENCIAS FOTOGRÁFICAS ──────────────────────────
+            // ── SECCIÓN 1: EVIDENCIAS FOTOGRÁFICAS ──────────────────────────
             FormCard(title = "Evidencias Fotográficas") {
                 Text(
-                    text = "Adjunta fotografías tomadas en campo para incluir en el reporte PDF/Excel:",
+                    text = "Adjunta fotografías tomadas en campo para incluir en el reporte Excel:",
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
@@ -381,20 +350,17 @@ fun ReportFormScreen(
     }
 }
 
-private fun shareFiles(context: Context, excelFile: File, pdfFile: File) {
+private fun shareExcel(context: Context, excelFile: File) {
     try {
         val excelUri = FileProvider.getUriForFile(context, "com.abdapps.ceireport.fileprovider", excelFile)
-        val pdfUri = FileProvider.getUriForFile(context, "com.abdapps.ceireport.fileprovider", pdfFile)
-
-        val uris = arrayListOf<Uri>(excelUri, pdfUri)
-        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-            type = "*/*"
-            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            putExtra(Intent.EXTRA_STREAM, excelUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir Reportes (PDF y Excel)"))
+        context.startActivity(Intent.createChooser(intent, "Compartir Reporte Excel"))
     } catch (e: Exception) {
-        Toast.makeText(context, "Error al compartir archivos", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Error al compartir el archivo Excel", Toast.LENGTH_SHORT).show()
         e.printStackTrace()
     }
 }

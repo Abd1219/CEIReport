@@ -31,6 +31,18 @@ data class Report(
     @ColumnInfo(defaultValue = "")
     val clima: List<String> = emptyList(),
 
+    // ── Pantalla 3: Actividades Realizadas y Observaciones ───────────────────
+    @ColumnInfo(defaultValue = "")
+    val actividadesRealizadas: List<String> = emptyList(),
+    @ColumnInfo(defaultValue = "")
+    val observacionesList: List<String> = emptyList(),
+
+    // ── Pantalla 4: Fuerza de Trabajo ───────────────────────────────────────
+    @ColumnInfo(defaultValue = "")
+    val fuerzaTrabajoCantidades: List<String> = emptyList(), // 10 valores, uno por rol
+    @ColumnInfo(defaultValue = "")
+    val fuerzaTrabajoHoras: List<String> = emptyList(),     // 10 valores, uno por rol
+
     // ── Campos generales existentes ──────────────────────────────────────────
     val title: String = "",
     val date: String = "",

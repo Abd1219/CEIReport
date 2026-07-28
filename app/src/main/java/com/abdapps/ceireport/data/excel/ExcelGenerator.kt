@@ -118,42 +118,156 @@ object ExcelGenerator {
             currentRow++
         }
 
-        // 3. Description Block
+        // 3. Actividades Realizadas Block (lista dinámica)
         currentRow++
-        val descHeaderRow = sheet.createRow(currentRow)
-        descHeaderRow.heightInPoints = 22f
-        val descHeaderCell = descHeaderRow.createCell(0)
-        descHeaderCell.setCellValue("Actividades Realizadas / Descripción")
-        descHeaderCell.cellStyle = sectionHeaderStyle
+        val actHeaderRow = sheet.createRow(currentRow)
+        actHeaderRow.heightInPoints = 22f
+        val actHeaderCell = actHeaderRow.createCell(0)
+        actHeaderCell.setCellValue("Actividades Realizadas")
+        actHeaderCell.cellStyle = sectionHeaderStyle
         sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
 
         currentRow++
-        val descRow = sheet.createRow(currentRow)
-        descRow.heightInPoints = 80f
-        val descCell = descRow.createCell(0)
-        descCell.setCellValue(report.description)
-        descCell.cellStyle = valueStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow + 2, 0, 5))
+        if (report.actividadesRealizadas.isNotEmpty()) {
+            report.actividadesRealizadas.forEachIndexed { index, actividad ->
+                val actRow = sheet.createRow(currentRow)
+                actRow.heightInPoints = 22f
 
-        currentRow += 4
+                val numCell = actRow.createCell(0)
+                numCell.setCellValue("${index + 1}.")
+                numCell.cellStyle = labelStyle
 
-        // 4. Observations Block
+                val actCell = actRow.createCell(1)
+                actCell.setCellValue(actividad)
+                actCell.cellStyle = valueStyle
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
+
+                currentRow++
+            }
+        } else {
+            val emptyRow = sheet.createRow(currentRow)
+            emptyRow.heightInPoints = 20f
+            val emptyCell = emptyRow.createCell(0)
+            emptyCell.setCellValue("Sin actividades registradas")
+            emptyCell.cellStyle = valueStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+            currentRow++
+        }
+
+        // 4. Observaciones Block (lista dinámica)
+        currentRow++
         val obsHeaderRow = sheet.createRow(currentRow)
         obsHeaderRow.heightInPoints = 22f
         val obsHeaderCell = obsHeaderRow.createCell(0)
-        obsHeaderCell.setCellValue("Observaciones")
+        obsHeaderCell.setCellValue("Observaciones y Notas de Campo")
         obsHeaderCell.cellStyle = sectionHeaderStyle
         sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
 
         currentRow++
-        val obsRow = sheet.createRow(currentRow)
-        obsRow.heightInPoints = 50f
-        val obsCell = obsRow.createCell(0)
-        obsCell.setCellValue(report.observations)
-        obsCell.cellStyle = valueStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow + 1, 0, 5))
+        if (report.observacionesList.isNotEmpty()) {
+            report.observacionesList.forEachIndexed { index, obs ->
+                val obsRow = sheet.createRow(currentRow)
+                obsRow.heightInPoints = 22f
 
-        currentRow += 3
+                val numCell = obsRow.createCell(0)
+                numCell.setCellValue("${index + 1}.")
+                numCell.cellStyle = labelStyle
+
+                val obsCell = obsRow.createCell(1)
+                obsCell.setCellValue(obs)
+                obsCell.cellStyle = valueStyle
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
+
+                currentRow++
+            }
+        } else {
+            val emptyRow = sheet.createRow(currentRow)
+            emptyRow.heightInPoints = 20f
+            val emptyCell = emptyRow.createCell(0)
+            emptyCell.setCellValue("Sin observaciones registradas")
+            emptyCell.cellStyle = valueStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+            currentRow++
+        }
+
+        currentRow++
+
+        // 5. Fuerza de Trabajo Block
+        val rolesNombres = listOf(
+            "Sp. Seg.", "Residente", "O.P.", "Topógrafo", "Cadenero",
+            "Oficiales", "Ayudante", "Banderero", "Sup. Obra", "Sup. Calidad"
+        )
+
+        val workforceHeaderRow = sheet.createRow(currentRow)
+        workforceHeaderRow.heightInPoints = 22f
+        val workforceHeaderCell = workforceHeaderRow.createCell(0)
+        workforceHeaderCell.setCellValue("Fuerza de Trabajo")
+        workforceHeaderCell.cellStyle = sectionHeaderStyle
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+        currentRow++
+
+        // Sub-encabezado de columnas
+        val wfColHeaderRow = sheet.createRow(currentRow)
+        wfColHeaderRow.heightInPoints = 20f
+        wfColHeaderRow.createCell(0).apply {
+            setCellValue("Rol / Puesto")
+            cellStyle = labelStyle
+        }
+        wfColHeaderRow.createCell(1).apply {
+            setCellValue("Cantidad")
+            cellStyle = labelStyle
+        }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+        wfColHeaderRow.createCell(3).apply {
+            setCellValue("Horas")
+            cellStyle = labelStyle
+        }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+        currentRow++
+
+        // Filas de cada rol
+        var totalCantidadWf = 0
+        var totalHorasWf = 0.0
+        rolesNombres.forEachIndexed { index, rol ->
+            val wfRow = sheet.createRow(currentRow)
+            wfRow.heightInPoints = 20f
+
+            val cantStr = report.fuerzaTrabajoCantidades.getOrElse(index) { "" }
+            val horStr = report.fuerzaTrabajoHoras.getOrElse(index) { "" }
+            val cant = cantStr.toIntOrNull() ?: 0
+            val hor = horStr.toDoubleOrNull() ?: 0.0
+            totalCantidadWf += cant
+            totalHorasWf += hor
+
+            wfRow.createCell(0).apply { setCellValue(rol); cellStyle = labelStyle }
+            wfRow.createCell(1).apply { setCellValue(cant.toDouble()); cellStyle = valueStyle }
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+            wfRow.createCell(3).apply { setCellValue(hor); cellStyle = valueStyle }
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+            currentRow++
+        }
+
+        // Fila de totales
+        val wfTotalRow = sheet.createRow(currentRow)
+        wfTotalRow.heightInPoints = 22f
+        wfTotalRow.createCell(0).apply { setCellValue("TOTAL"); cellStyle = labelStyle }
+        wfTotalRow.createCell(1).apply { setCellValue(totalCantidadWf.toDouble()); cellStyle = labelStyle }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+        wfTotalRow.createCell(3).apply { setCellValue(totalHorasWf); cellStyle = labelStyle }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+        currentRow++
+
+        // Total HH
+        val hhRow = sheet.createRow(currentRow)
+        hhRow.heightInPoints = 24f
+        hhRow.createCell(0).apply { setCellValue("Total de HH"); cellStyle = sectionHeaderStyle }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 2))
+        hhRow.createCell(3).apply {
+            setCellValue("${"%.1f".format(totalHorasWf)} hrs")
+            cellStyle = sectionHeaderStyle
+        }
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+        currentRow += 2
 
         // Helper for Drawing Pictures
         val drawing = sheet.createDrawingPatriarch()

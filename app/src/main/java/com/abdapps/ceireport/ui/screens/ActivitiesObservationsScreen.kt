@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,29 +25,9 @@ import androidx.compose.ui.unit.sp
 import com.abdapps.ceireport.ui.theme.*
 import com.abdapps.ceireport.ui.viewmodel.ReportViewModel
 
-// ── Tipos de clima disponibles ────────────────────────────────────────────────
-data class ClimaOpcion(
-    val id: String,
-    val emoji: String,
-    val label: String,
-    val color: Color
-)
-
-private val CLIMAS = listOf(
-    ClimaOpcion("soleado",        "☀️",  "Soleado",             Color(0xFFF59E0B)),
-    ClimaOpcion("parcial",        "⛅",  "Parcialmente\nNublado", Color(0xFF60A5FA)),
-    ClimaOpcion("nublado",        "☁️",  "Nublado",             Color(0xFF94A3B8)),
-    ClimaOpcion("lluvioso",       "🌧️",  "Lluvioso",            Color(0xFF3B82F6)),
-    ClimaOpcion("tormenta",       "⛈️",  "Tormenta\nEléctrica", Color(0xFF7C3AED)),
-    ClimaOpcion("neblina",        "🌫️",  "Neblina",             Color(0xFF9CA3AF)),
-    ClimaOpcion("ventoso",        "💨",  "Ventoso",             Color(0xFF06B6D4)),
-    ClimaOpcion("caluroso",       "🌡️",  "Caluroso",            Color(0xFFEF4444)),
-    ClimaOpcion("frio",           "❄️",  "Frío",                Color(0xFF93C5FD)),
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SafetyWeatherScreen(
+fun ActivitiesObservationsScreen(
     viewModel: ReportViewModel,
     onNavigateBack: () -> Unit,
     onNavigateNext: () -> Unit
@@ -58,8 +37,12 @@ fun SafetyWeatherScreen(
     val report = reportState ?: return
     val scrollState = rememberScrollState()
 
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddActivityDialog by remember { mutableStateOf(false) }
     var nuevaActividad by remember { mutableStateOf("") }
+
+    var showAddObservationDialog by remember { mutableStateOf(false) }
+    var nuevaObservacion by remember { mutableStateOf("") }
+
     var showExitDialog by remember { mutableStateOf(false) }
 
     // Interceptar botón atrás nativo del dispositivo
@@ -74,13 +57,13 @@ fun SafetyWeatherScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Seguridad y Clima",
+                            text = "Actividades y Observaciones",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 2 de 5 — Condiciones de Campo",
+                            text = "Paso 3 de 5 — Registro de Trabajo",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -150,23 +133,30 @@ fun SafetyWeatherScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo
-            StepProgressBar(currentStep = 2, totalSteps = 5)
+            // Barra de progreso del flujo (Paso 3 de 5)
+            StepProgressBar(currentStep = 3, totalSteps = 5)
 
-            // ── SECCIÓN 1: SEGURIDAD ─────────────────────────────────────────
-            FormCard(title = "Actividades de Seguridad") {
-                AnimatedVisibility(visible = report.actividadesSeguridad.isNotEmpty()) {
+            // ── SECCIÓN 1: ACTIVIDADES REALIZADAS ───────────────────────────
+            FormCard(title = "Actividades Realizadas") {
+                Text(
+                    text = "Registra las tareas y actividades ejecutadas durante la jornada:",
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
+
+                AnimatedVisibility(visible = report.actividadesRealizadas.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        report.actividadesSeguridad.forEachIndexed { index, actividad ->
-                            ActividadItem(
+                        report.actividadesRealizadas.forEachIndexed { index, actividad ->
+                            ItemRegistroCard(
                                 numero = index + 1,
                                 texto = actividad,
+                                badgeColor = HeaderBlue,
                                 onDelete = {
-                                    val updated = report.actividadesSeguridad
+                                    val updated = report.actividadesRealizadas
                                         .toMutableList()
                                         .also { it.removeAt(index) }
                                     viewModel.updateCurrentReport { r ->
-                                        r.copy(actividadesSeguridad = updated)
+                                        r.copy(actividadesRealizadas = updated)
                                     }
                                 }
                             )
@@ -174,87 +164,97 @@ fun SafetyWeatherScreen(
                     }
                 }
 
-                AnimatedVisibility(visible = report.actividadesSeguridad.isEmpty()) {
-                    Text(
-                        text = "No hay actividades de seguridad registradas aún.",
-                        fontSize = 13.sp,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                AnimatedVisibility(visible = report.actividadesRealizadas.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(70.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF8FAFC))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No se han agregado actividades aún",
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
                 }
 
                 Button(
                     onClick = {
                         nuevaActividad = ""
-                        showAddDialog = true
+                        showAddActivityDialog = true
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Agregar Actividad de Seguridad", fontWeight = FontWeight.Bold)
+                    Text("Agregar Actividad Realizada", fontWeight = FontWeight.Bold)
                 }
             }
 
-            // ── SECCIÓN 2: CLIMA ─────────────────────────────────────────────
-            FormCard(title = "Condiciones Climáticas en Campo") {
+            // ── SECCIÓN 2: OBSERVACIONES / NOTAS DE CAMPO ───────────────────
+            FormCard(title = "Observaciones y Notas de Campo") {
                 Text(
-                    text = "Selecciona las condiciones observadas durante la jornada:",
+                    text = "Añade notas, hallazgos o comentarios relevantes de supervisión:",
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
 
-                val rows = CLIMAS.chunked(3)
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rows.forEach { rowItems ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            rowItems.forEach { opcion ->
-                                val isSelected = report.clima.contains(opcion.id)
-                                ClimaCard(
-                                    opcion = opcion,
-                                    isSelected = isSelected,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        val updated = report.clima.toMutableList().apply {
-                                            if (isSelected) remove(opcion.id) else add(opcion.id)
-                                        }
-                                        viewModel.updateCurrentReport { r ->
-                                            r.copy(clima = updated)
-                                        }
+                AnimatedVisibility(visible = report.observacionesList.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        report.observacionesList.forEachIndexed { index, observacion ->
+                            ItemRegistroCard(
+                                numero = index + 1,
+                                texto = observacion,
+                                badgeColor = AccentOrange,
+                                onDelete = {
+                                    val updated = report.observacionesList
+                                        .toMutableList()
+                                        .also { it.removeAt(index) }
+                                    viewModel.updateCurrentReport { r ->
+                                        r.copy(observacionesList = updated)
                                     }
-                                )
-                            }
-                            repeat(3 - rowItems.size) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
+                                }
+                            )
                         }
                     }
                 }
 
-                AnimatedVisibility(visible = report.clima.isNotEmpty()) {
-                    val seleccionados = CLIMAS
-                        .filter { report.clima.contains(it.id) }
-                        .joinToString("  ") { "${it.emoji} ${it.label.replace("\n", " ")}" }
-                    Surface(
+                AnimatedVisibility(visible = report.observacionesList.isEmpty()) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = HeaderBlue.copy(alpha = 0.08f)
+                            .height(70.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF8FAFC))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Clima seleccionado: $seleccionados",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = HeaderBlue,
-                            modifier = Modifier.padding(12.dp)
+                            text = "No se han agregado observaciones aún",
+                            fontSize = 13.sp,
+                            color = TextSecondary
                         )
                     }
+                }
+
+                Button(
+                    onClick = {
+                        nuevaObservacion = ""
+                        showAddObservationDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Agregar Observación", fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -262,30 +262,30 @@ fun SafetyWeatherScreen(
         }
     }
 
-    // Diálogo: Agregar actividad de seguridad
-    if (showAddDialog) {
+    // Diálogo: Agregar Actividad Realizada
+    if (showAddActivityDialog) {
         AlertDialog(
-            onDismissRequest = { showAddDialog = false },
+            onDismissRequest = { showAddActivityDialog = false },
             icon = {
                 Icon(
-                    Icons.Default.Security,
+                    Icons.Default.Assignment,
                     contentDescription = null,
-                    tint = Color(0xFF16A34A),
+                    tint = HeaderBlue,
                     modifier = Modifier.size(28.dp)
                 )
             },
-            title = { Text("Nueva Actividad de Seguridad") },
+            title = { Text("Nueva Actividad Realizada") },
             text = {
                 OutlinedTextField(
                     value = nuevaActividad,
                     onValueChange = { nuevaActividad = it },
                     label = { Text("Descripción de la actividad") },
-                    placeholder = { Text("Ej: Plática de 5 min sobre EPP") },
+                    placeholder = { Text("Ej: Montaje e inspección de estructura metálica en Eje C-4") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = textFieldColors(),
-                    minLines = 2,
-                    maxLines = 4
+                    minLines = 3,
+                    maxLines = 5
                 )
             },
             confirmButton = {
@@ -293,24 +293,79 @@ fun SafetyWeatherScreen(
                     onClick = {
                         val texto = nuevaActividad.trim()
                         if (texto.isNotEmpty()) {
-                            val updated = report.actividadesSeguridad
+                            val updated = report.actividadesRealizadas
                                 .toMutableList()
                                 .also { it.add(texto) }
                             viewModel.updateCurrentReport { r ->
-                                r.copy(actividadesSeguridad = updated)
+                                r.copy(actividadesRealizadas = updated)
                             }
                         }
-                        showAddDialog = false
+                        showAddActivityDialog = false
                         nuevaActividad = ""
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Agregar")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
+                TextButton(onClick = { showAddActivityDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo: Agregar Observación
+    if (showAddObservationDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddObservationDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Comment,
+                    contentDescription = null,
+                    tint = AccentOrange,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = { Text("Nueva Observación") },
+            text = {
+                OutlinedTextField(
+                    value = nuevaObservacion,
+                    onValueChange = { nuevaObservacion = it },
+                    label = { Text("Detalle de la observación") },
+                    placeholder = { Text("Ej: Retraso de 30 min por entrega diferida de material") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = textFieldColors(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val texto = nuevaObservacion.trim()
+                        if (texto.isNotEmpty()) {
+                            val updated = report.observacionesList
+                                .toMutableList()
+                                .also { it.add(texto) }
+                            viewModel.updateCurrentReport { r ->
+                                r.copy(observacionesList = updated)
+                            }
+                        }
+                        showAddObservationDialog = false
+                        nuevaObservacion = ""
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Agregar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddObservationDialog = false }) {
                     Text("Cancelar")
                 }
             }
@@ -336,9 +391,10 @@ fun SafetyWeatherScreen(
 }
 
 @Composable
-private fun ActividadItem(
+private fun ItemRegistroCard(
     numero: Int,
     texto: String,
+    badgeColor: Color,
     onDelete: () -> Unit
 ) {
     Row(
@@ -355,7 +411,7 @@ private fun ActividadItem(
             modifier = Modifier
                 .size(26.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF16A34A)),
+                .background(badgeColor),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -380,46 +436,6 @@ private fun ActividadItem(
                 contentDescription = "Eliminar",
                 tint = StatusPendingIcon,
                 modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ClimaCard(
-    opcion: ClimaOpcion,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val bgColor = if (isSelected) opcion.color.copy(alpha = 0.15f) else Color(0xFFF8FAFC)
-    val borderColor = if (isSelected) opcion.color else Color(0xFFE2E8F0)
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(bgColor)
-            .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(14.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(text = opcion.emoji, fontSize = 28.sp)
-            Text(
-                text = opcion.label,
-                fontSize = 11.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) opcion.color else TextSecondary,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 14.sp
             )
         }
     }
