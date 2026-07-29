@@ -117,7 +117,11 @@ fun SafetyWeatherScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo
-            StepProgressBar(currentStep = 2, totalSteps = 7)
+            StepProgressBar(
+                currentStep = 2,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── SECCIÓN 1: SEGURIDAD ─────────────────────────────────────────
             FormCard(title = "Actividades de Seguridad") {

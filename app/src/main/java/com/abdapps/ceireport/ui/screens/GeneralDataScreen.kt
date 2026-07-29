@@ -136,7 +136,11 @@ fun GeneralDataScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo
-            StepProgressBar(currentStep = 1, totalSteps = 7)
+            StepProgressBar(
+                currentStep = 1,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── Sección 1: Identificación del Proyecto ──────────────────────────
             FormCard(title = "Identificación del Proyecto") {
@@ -342,7 +346,7 @@ fun ExitConfirmationDialog(
 }
 
 @Composable
-fun StepProgressBar(currentStep: Int, totalSteps: Int) {
+fun StepProgressBar(currentStep: Int, totalSteps: Int, stepValids: List<Boolean> = emptyList()) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -352,13 +356,13 @@ fun StepProgressBar(currentStep: Int, totalSteps: Int) {
                 text = "Progreso del formulario",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = "$currentStep de $totalSteps",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = HeaderBlue
+                color = MaterialTheme.colorScheme.primary
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -367,12 +371,21 @@ fun StepProgressBar(currentStep: Int, totalSteps: Int) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             for (i in 1..totalSteps) {
+                val isCurrent = i == currentStep
+                val isValid = stepValids.getOrNull(i - 1) ?: true
+                
+                val color = when {
+                    isCurrent -> MaterialTheme.colorScheme.primary
+                    i < currentStep && !isValid -> AccentOrange // Warning/Falta llenar
+                    i < currentStep -> MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    else -> MaterialTheme.colorScheme.outlineVariant
+                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(if (i <= currentStep) HeaderBlue else Color(0xFFE2E8F0))
+                        .background(color)
                 )
             }
         }
@@ -387,7 +400,10 @@ fun FormCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -400,9 +416,9 @@ fun FormCard(
                 text = title,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = HeaderBlue
+                color = MaterialTheme.colorScheme.primary
             )
-            HorizontalDivider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             content()
         }
     }

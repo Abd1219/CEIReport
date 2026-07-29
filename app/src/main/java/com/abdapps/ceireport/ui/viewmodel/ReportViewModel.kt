@@ -26,6 +26,27 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
     private val _currentReport = MutableStateFlow<Report?>(null)
     val currentReport: StateFlow<Report?> = _currentReport.asStateFlow()
 
+    fun getStepValidations(report: Report): List<Boolean> {
+        return listOf(
+            // Paso 1: Datos Generales (Proyecto no vacio y fecha no vacia)
+            report.proyecto.isNotBlank() && report.date.isNotBlank(),
+            // Paso 2: Seguridad y Clima (Tiene al menos un clima seleccionado o actividades)
+            report.clima.isNotEmpty() || report.actividadesSeguridad.isNotEmpty(),
+            // Paso 3: Actividades Realizadas
+            report.actividadesRealizadas.isNotEmpty(),
+            // Paso 4: Fuerza de Trabajo (Al menos un rol con cantidad > 0)
+            report.fuerzaTrabajoCantidades.any { it.isNotBlank() && (it.toIntOrNull() ?: 0) > 0 },
+            // Paso 5: Maquinaria Utilizada (Al menos un equipo con cantidad > 0)
+            report.maquinariaCantidades.any { it.isNotBlank() && (it.toIntOrNull() ?: 0) > 0 },
+            // Paso 6: Actividades Planeadas
+            report.actividadesPlaneadas.isNotEmpty(),
+            // Paso 7: Evidencias Fotográficas
+            report.photos.isNotEmpty(),
+            // Paso 8: Avance y Finalización (Al menos un responsable o supervisor)
+            report.supervisor.isNotBlank() || report.technicianName.isNotBlank()
+        )
+    }
+
     fun createNewReport() {
         _currentReport.value = Report(
             date = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date())

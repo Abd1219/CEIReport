@@ -145,8 +145,12 @@ fun MachineryScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo (Paso 5 de 6)
-            StepProgressBar(currentStep = 5, totalSteps = 7)
+            // Barra de progreso del flujo (Paso 5 de 8)
+            StepProgressBar(
+                currentStep = 5,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── TARJETA PRINCIPAL: MAQUINARIA UTILIZADA ──────────────────────
             Card(

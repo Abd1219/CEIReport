@@ -157,7 +157,11 @@ fun FinalizeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo (Paso 8 de 8)
-            StepProgressBar(currentStep = 8, totalSteps = 8)
+            StepProgressBar(
+                currentStep = 8,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── SECCIÓN 1: AVANCE POR ÁREA ─────────────────────────────────────
             FormCard(title = "Avance por Área / Disciplina") {

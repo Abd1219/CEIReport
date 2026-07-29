@@ -99,8 +99,12 @@ fun PlannedActivitiesScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo (Paso 6 de 7)
-            StepProgressBar(currentStep = 6, totalSteps = 7)
+            // Barra de progreso del flujo (Paso 6 de 8)
+            StepProgressBar(
+                currentStep = 6,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── TARJETA: ACTIVIDADES PLANEADAS PARA EL SIGUIENTE DÍA ────────
             Card(

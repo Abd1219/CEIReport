@@ -85,14 +85,58 @@ object ExcelGenerator {
             bottomBorderColor = headerColor
         }
 
-        // 1. Title Banner
+        // 1. Title Banner with Logo
         val titleRow = sheet.createRow(0)
-        titleRow.heightInPoints = 40f
-        val titleCell = titleRow.createCell(0)
+        titleRow.heightInPoints = 50f
+        
+        // Load and place Logo in Col 0 (merged 0..1)
+        val headerDrawing = sheet.createDrawingPatriarch()
+        try {
+            val logoResId = context.resources.getIdentifier("logocei", "drawable", context.packageName)
+            if (logoResId != 0) {
+                val logoBmp = BitmapFactory.decodeResource(context.resources, logoResId)
+                if (logoBmp != null) {
+                    val logoStream = ByteArrayOutputStream()
+                    logoBmp.compress(Bitmap.CompressFormat.PNG, 100, logoStream)
+                    val logoBytes = logoStream.toByteArray()
+                    val pictureIdx = workbook.addPicture(logoBytes, Workbook.PICTURE_TYPE_PNG)
+                    
+                    val anchor = workbook.creationHelper.createClientAnchor().apply {
+                        setCol1(0)
+                        setRow1(0)
+                        setCol2(2)
+                        setRow2(1)
+                    }
+                    headerDrawing.createPicture(anchor, pictureIdx)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Título al lado derecho (Col 2 a 5)
+        val titleCell = titleRow.createCell(2)
         val reportTitle = report.proyecto.ifBlank { report.title.ifBlank { "REPORTE DIARIO" } }
-        titleCell.setCellValue("REPORTE DIARIO - $reportTitle")
-        titleCell.cellStyle = titleStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 5))
+        titleCell.setCellValue("REPORTE DIARIO\n$reportTitle")
+        
+        // Estilo título centrado y ajustado
+        val titleStyleLogo = workbook.createCellStyle().apply {
+            fillForegroundColor = headerColor
+            fillPattern = FillPatternType.SOLID_FOREGROUND
+            alignment = HorizontalAlignment.CENTER
+            verticalAlignment = VerticalAlignment.CENTER
+            setFont(titleFont)
+            wrapText = true
+        }
+        titleCell.cellStyle = titleStyleLogo
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 2, 5))
+        
+        // Rellenar fondo del espacio del logo con el color del header
+        val cell0 = titleRow.createCell(0)
+        cell0.cellStyle = titleStyleLogo
+        val cell1 = titleRow.createCell(1)
+        cell1.cellStyle = titleStyleLogo
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 1))
 
         // 2. Metadata Info Block (Datos Generales)
         val fields = mutableListOf(

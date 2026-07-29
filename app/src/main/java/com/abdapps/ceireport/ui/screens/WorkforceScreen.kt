@@ -149,8 +149,12 @@ fun WorkforceScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo (Paso 4 de 5)
-            StepProgressBar(currentStep = 4, totalSteps = 7)
+            // Barra de progreso del flujo (Paso 4 de 8)
+            StepProgressBar(
+                currentStep = 4,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── TARJETA PRINCIPAL: FUERZA DE TRABAJO ─────────────────────────
             Card(

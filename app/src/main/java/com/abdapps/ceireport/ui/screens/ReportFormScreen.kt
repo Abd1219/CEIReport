@@ -182,14 +182,18 @@ fun ReportFormScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Barra de progreso del flujo (Paso 7 de 8)
-            StepProgressBar(currentStep = 7, totalSteps = 8)
+            StepProgressBar(
+                currentStep = 7,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── SECCIÓN 1: EVIDENCIAS FOTOGRÁFICAS ──────────────────────────
             FormCard(title = "Evidencias Fotográficas") {
                 Text(
                     text = "Adjunta fotografías tomadas en campo con su respectiva descripción para incluir en el reporte Excel:",
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Row(
@@ -236,8 +240,11 @@ fun ReportFormScreen(
                                     .width(150.dp)
                                     .fillMaxHeight(),
                                 shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Column(modifier = Modifier.fillMaxSize()) {
                                     Box(
@@ -285,7 +292,7 @@ fun ReportFormScreen(
                                         Text(
                                             text = if (caption.isNotBlank()) caption else "+ Agregar nota",
                                             fontSize = 11.sp,
-                                            color = if (caption.isNotBlank()) TextPrimary else TextSecondary,
+                                            color = if (caption.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.weight(1f)
@@ -307,14 +314,14 @@ fun ReportFormScreen(
                             .fillMaxWidth()
                             .height(80.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFFF8FAFC))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp)),
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No se han adjuntado fotos aún",
                             fontSize = 13.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -325,15 +332,18 @@ fun ReportFormScreen(
                 Text(
                     text = "Adjunta una imagen del croquis o esquema descriptivo del área de trabajo:",
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (!report.croquisPath.isNullOrEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Box(
@@ -347,7 +357,7 @@ fun ReportFormScreen(
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color(0xFFF8FAFC))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
                                 )
                                 Box(
                                     modifier = Modifier
@@ -410,42 +420,6 @@ fun ReportFormScreen(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Galería Croquis")
                         }
-                    }
-                }
-            }
-
-            // ── SECCIÓN 3: FIRMA DIGITAL ─────────────────────────────────────
-            FormCard(title = "Firma del Responsable") {
-                Button(
-                    onClick = { showSignatureDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Draw, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (report.signaturePath.isNullOrEmpty()) "Dibujar Firma Digital" else "Modificar Firma",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                if (!report.signaturePath.isNullOrEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(110.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(14.dp))
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(model = File(report.signaturePath)),
-                            contentDescription = "Firma guardada",
-                            modifier = Modifier.fillMaxSize()
-                        )
                     }
                 }
             }

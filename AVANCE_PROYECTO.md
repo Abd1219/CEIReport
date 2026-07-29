@@ -87,6 +87,12 @@
 
 ## 📅 Historial de Actualizaciones Recientes
 
+- **[2026-07-28]** *(Sesión 7 - Firma Única, Corrección SignaturePad, Logo en Excel, Soporte Dark Mode y Alertas de Llenado)*:
+  - **Firma Única**: Removida la firma del contratista de la Pantalla 7 (Evidencias) puesto que ya existe en la Pantalla 8 (Finalización).
+  - **Corrección de SignaturePad**: Rediseñado el motor de dibujo digital para capturar las dimensiones dinámicas del Canvas y escalar las coordenadas 1:1, previniendo que la firma se recorte o desplace a la derecha.
+  - **Logo en Excel Generado**: Modificado `ExcelGenerator` para leer `logocei.png` y renderizarlo en las columnas 0 y 1 de la cabecera del archivo `.xlsx`, desplazando el título del reporte al lado derecho.
+  - **Soporte de Tema Oscuro (UI/UX)**: Refactorizado el componente `FormCard` y varios contenedores para adaptarse a la paleta de Material 3 dinámicamente, corrigiendo la invisibilidad de textos en modo oscuro.
+  - **Alertas de Llenado Faltante**: El `StepProgressBar` de 8 pasos ahora muestra en color `AccentOrange` de advertencia aquellos pasos previos que el usuario recorrió pero dejó sin completar.
 - **[2026-07-28]** *(Sesión 6 - Pantalla Finalización, Avance por Área, Firma del Supervisor y Logo Real en SplashScreen)*:
   - Nueva **Pantalla 8 (FinalizeScreen)**: Captura del avance de obra por área/disciplina con porcentaje (0-100%), nombre del supervisor y su firma digital independiente.
   - **Flujo expandido a 8 pasos**: El `HorizontalPager` ahora gestiona 8 pantallas; `FinalizeScreen` se integra como paso final.

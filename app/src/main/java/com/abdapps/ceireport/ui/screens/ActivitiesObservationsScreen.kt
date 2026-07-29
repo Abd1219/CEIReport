@@ -99,8 +99,12 @@ fun ActivitiesObservationsScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo (Paso 3 de 5)
-            StepProgressBar(currentStep = 3, totalSteps = 7)
+            // Barra de progreso del flujo (Paso 3 de 8)
+            StepProgressBar(
+                currentStep = 3,
+                totalSteps = 8,
+                stepValids = viewModel.getStepValidations(report)
+            )
 
             // ── SECCIÓN 1: ACTIVIDADES REALIZADAS ───────────────────────────
             FormCard(title = "Actividades Realizadas") {

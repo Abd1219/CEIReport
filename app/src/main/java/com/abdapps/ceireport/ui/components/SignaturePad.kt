@@ -31,6 +31,8 @@ fun SignaturePad(
     onDismiss: () -> Unit
 ) {
     var points = remember { mutableStateListOf<Offset?>() }
+    var canvasWidth by remember { mutableStateOf(1f) }
+    var canvasHeight by remember { mutableStateOf(1f) }
 
     Column(
         modifier = modifier
@@ -72,6 +74,8 @@ fun SignaturePad(
                 }
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
+                canvasWidth = size.width
+                canvasHeight = size.height
                 for (i in 0 until points.size - 1) {
                     val p1 = points[i]
                     val p2 = points[i + 1]
@@ -106,8 +110,10 @@ fun SignaturePad(
             Button(
                 onClick = {
                     if (points.isNotEmpty()) {
-                        // Create bitmap of signature
-                        val bitmap = Bitmap.createBitmap(400, 200, Bitmap.Config.ARGB_8888)
+                        // Create bitmap of signature matching the exact drawn width & height
+                        val w = if (canvasWidth > 0) canvasWidth.toInt() else 400
+                        val h = if (canvasHeight > 0) canvasHeight.toInt() else 200
+                        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                         val canvas = Canvas(bitmap)
                         canvas.drawColor(Color.WHITE)
                         
@@ -119,22 +125,15 @@ fun SignaturePad(
                             style = Paint.Style.STROKE
                             isAntiAlias = true
                         }
-
-                        // Determine scale since Canvas drawing was on variable screen size
-                        // For simplicity, we just scale points to fit 400x200
-                        val rawWidth = 400f
-                        val rawHeight = 200f
                         
-                        var path = android.graphics.Path()
+                        val path = android.graphics.Path()
                         var first = true
                         for (point in points) {
                             if (point == null) {
                                 first = true
                             } else {
-                                // Scale point coords (assuming max raw size was around screen density, 
-                                // but for simplicity we just map directly and cap)
-                                val x = point.x.coerceIn(0f, rawWidth)
-                                val y = point.y.coerceIn(0f, rawHeight)
+                                val x = point.x.coerceIn(0f, w.toFloat())
+                                val y = point.y.coerceIn(0f, h.toFloat())
                                 if (first) {
                                     path.moveTo(x, y)
                                     first = false
