@@ -5,92 +5,194 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.abdapps.ceireport.data.model.Report
 import org.apache.poi.ss.usermodel.*
+import org.apache.poi.xssf.usermodel.XSSFCellStyle
+import org.apache.poi.xssf.usermodel.XSSFColor
+import org.apache.poi.xssf.usermodel.XSSFFont
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object ExcelGenerator {
 
+    // ── Corporate Colors ───────────────────────────────────────────────────────
+    private fun rgb(r: Int, g: Int, b: Int) =
+        XSSFColor(byteArrayOf(r.toByte(), g.toByte(), b.toByte()), null)
+
+    private val cBlueDark   = rgb(26,  60,  110)   // #1A3C6E — Encabezado principal
+    private val cBlueMid    = rgb(46,  95,  163)   // #2E5FA3 — Bandas de sección
+    private val cBlueLight  = rgb(214, 228, 247)   // #D6E4F7 — Fondo de etiquetas
+    private val cBluePale   = rgb(235, 244, 255)   // #EBF4FF — Zebra par
+    private val cOrange     = rgb(232, 119, 34)    // #E87722 — Totales / acento CEI
+    private val cWhite      = rgb(255, 255, 255)
+    private val cBlack      = rgb(10,  10,  10)
+    private val cGrayText   = rgb(120, 120, 120)   // Pie de página
+
     fun generate(context: Context, report: Report): File {
         val workbook = XSSFWorkbook()
-        val sheet = workbook.createSheet("Reporte Diario")
+        val sheet    = workbook.createSheet("Reporte Diario")
 
-        // Enable gridlines
-        sheet.isDisplayGridlines = true
+        // Sin gridlines para look más limpio
+        sheet.isDisplayGridlines = false
 
-        // Colors
-        val headerColor = IndexedColors.DARK_BLUE.index
-        val textColor = IndexedColors.BLACK.index
-        val lightGray = IndexedColors.GREY_25_PERCENT.index
-
-        // Fonts
-        val titleFont = workbook.createFont().apply {
-            fontName = "Arial"
-            fontHeightInPoints = 16
-            bold = true
-            color = IndexedColors.WHITE.index
+        // ── Helpers de creación de fuentes y estilos ───────────────────────────
+        fun makeFont(
+            name:  String   = "Calibri",
+            size:  Short    = 10,
+            bold:  Boolean  = false,
+            color: XSSFColor = cBlack
+        ): XSSFFont = (workbook.createFont() as XSSFFont).apply {
+            fontName            = name
+            fontHeightInPoints  = size
+            this.bold           = bold
+            setColor(color)
         }
 
-        val sectionFont = workbook.createFont().apply {
-            fontName = "Arial"
-            fontHeightInPoints = 12
-            bold = true
-            color = headerColor
+        fun makeStyle(
+            bg:          XSSFColor?           = null,
+            font:        XSSFFont,
+            hAlign:      HorizontalAlignment  = HorizontalAlignment.LEFT,
+            vAlign:      VerticalAlignment    = VerticalAlignment.CENTER,
+            wrap:        Boolean              = false,
+            border:      BorderStyle          = BorderStyle.NONE,
+            borderColor: XSSFColor            = cBlueLight
+        ): XSSFCellStyle = (workbook.createCellStyle() as XSSFCellStyle).apply {
+            setFont(font)
+            alignment         = hAlign
+            verticalAlignment = vAlign
+            wrapText          = wrap
+            bg?.let {
+                setFillForegroundColor(it)
+                fillPattern = FillPatternType.SOLID_FOREGROUND
+            }
+            if (border != BorderStyle.NONE) {
+                borderTop    = border; setTopBorderColor(borderColor)
+                borderBottom = border; setBottomBorderColor(borderColor)
+                borderLeft   = border; setLeftBorderColor(borderColor)
+                borderRight  = border; setRightBorderColor(borderColor)
+            }
         }
 
-        val boldFont = workbook.createFont().apply {
-            fontName = "Arial"
-            fontHeightInPoints = 10
-            bold = true
+        // ── Fuentes ────────────────────────────────────────────────────────────
+        val fTitle      = makeFont("Calibri", 18, true,  cWhite)
+        val fSubtitle   = makeFont("Calibri", 10, false, cWhite)
+        val fSection    = makeFont("Calibri", 11, true,  cWhite)
+        val fLabelWhite = makeFont("Calibri", 10, true,  cWhite)
+        val fLabelBlue  = makeFont("Calibri", 10, true,  cBlueDark)
+        val fValue      = makeFont("Calibri", 10, false, cBlack)
+        val fTotal      = makeFont("Calibri", 11, true,  cWhite)
+        val fFooter     = makeFont("Calibri",  9, false, cGrayText)
+        val fCargo      = makeFont("Calibri",  9, false, cGrayText)
+
+        // ── Estilos ────────────────────────────────────────────────────────────
+
+        // Encabezado principal (fondo azul oscuro)
+        val stHeader    = makeStyle(cBlueDark, fTitle, HorizontalAlignment.LEFT,   VerticalAlignment.CENTER, true)
+        val stHeaderFill= makeStyle(cBlueDark, fSubtitle)
+        val stSubBar    = makeStyle(cBlueDark, fSubtitle, HorizontalAlignment.RIGHT)
+
+        // Separador naranja (sin texto, solo color)
+        val stOrangeBar = (workbook.createCellStyle() as XSSFCellStyle).apply {
+            setFillForegroundColor(cOrange); fillPattern = FillPatternType.SOLID_FOREGROUND
         }
 
-        val normalFont = workbook.createFont().apply {
-            fontName = "Arial"
-            fontHeightInPoints = 10
-        }
+        // Encabezados de sección (banda azul media)
+        val stSection   = makeStyle(cBlueMid, fSection,    HorizontalAlignment.LEFT, VerticalAlignment.CENTER)
 
-        // Styles
-        val titleStyle = workbook.createCellStyle().apply {
-            fillForegroundColor = headerColor
-            fillPattern = FillPatternType.SOLID_FOREGROUND
-            alignment = HorizontalAlignment.CENTER
+        // Etiquetas (fondo azul claro, texto azul oscuro negrita)
+        val stLabel     = makeStyle(cBlueLight, fLabelBlue, HorizontalAlignment.LEFT, VerticalAlignment.CENTER,
+                                    false, BorderStyle.THIN, cBlueMid)
+
+        // Etiqueta de columna en tabla (fondo azul medio, texto blanco negrita)
+        val stColHeader = makeStyle(cBlueMid, fLabelWhite, HorizontalAlignment.CENTER, VerticalAlignment.CENTER,
+                                    false, BorderStyle.THIN, cBlueDark)
+
+        // Valores — dos variantes: normal (blanco) y zebra (azul pálido)
+        val stValue     = makeStyle(null,      fValue, HorizontalAlignment.LEFT,   VerticalAlignment.CENTER,
+                                    true, BorderStyle.THIN, cBlueLight)
+        val stValueZ    = makeStyle(cBluePale, fValue, HorizontalAlignment.LEFT,   VerticalAlignment.CENTER,
+                                    true, BorderStyle.THIN, cBlueLight)
+        val stValueC    = makeStyle(null,      fValue, HorizontalAlignment.CENTER, VerticalAlignment.CENTER,
+                                    false, BorderStyle.THIN, cBlueLight)
+        val stValueCZ   = makeStyle(cBluePale, fValue, HorizontalAlignment.CENTER, VerticalAlignment.CENTER,
+                                    false, BorderStyle.THIN, cBlueLight)
+
+        // Totales (naranja, texto blanco)
+        val stTotal     = makeStyle(cOrange, fTotal, HorizontalAlignment.CENTER, VerticalAlignment.CENTER,
+                                    false, BorderStyle.THIN, cBlueDark)
+
+        // Pie de página
+        val stFooter    = makeStyle(null, fFooter, HorizontalAlignment.CENTER)
+        val stCargo     = makeStyle(null, fCargo,  HorizontalAlignment.CENTER)
+
+        // Línea de firma
+        val stSignLine  = (workbook.createCellStyle() as XSSFCellStyle).apply {
+            borderTop = BorderStyle.MEDIUM
+            setTopBorderColor(cBlueMid)
+            setFont(makeFont("Calibri", 10, true, cBlueDark))
+            alignment         = HorizontalAlignment.CENTER
             verticalAlignment = VerticalAlignment.CENTER
-            setFont(titleFont)
         }
 
-        val labelStyle = workbook.createCellStyle().apply {
-            setFont(boldFont)
-            fillForegroundColor = IndexedColors.LIGHT_CORNFLOWER_BLUE.index
-            fillPattern = FillPatternType.SOLID_FOREGROUND
-            borderBottom = BorderStyle.THIN
-            borderTop = BorderStyle.THIN
-            borderLeft = BorderStyle.THIN
-            borderRight = BorderStyle.THIN
+        // ── Único drawing patriarch para todas las imágenes ────────────────────
+        val drawing = sheet.createDrawingPatriarch()
+
+        // ── Ancho de columnas ──────────────────────────────────────────────────
+        sheet.setColumnWidth(0, 6000)
+        sheet.setColumnWidth(1, 4200)
+        sheet.setColumnWidth(2, 4200)
+        sheet.setColumnWidth(3, 6000)
+        sheet.setColumnWidth(4, 4200)
+        sheet.setColumnWidth(5, 4200)
+
+        // ── Contador de filas y helpers ────────────────────────────────────────
+        var r = 0
+
+        fun merge(r1: Int, r2: Int, c1: Int, c2: Int) =
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(r1, r2, c1, c2))
+
+        fun Row.cell(col: Int, value: String,  st: XSSFCellStyle) =
+            createCell(col).apply { setCellValue(value); cellStyle = st }
+
+        fun Row.cell(col: Int, value: Double,  st: XSSFCellStyle) =
+            createCell(col).apply { setCellValue(value); cellStyle = st }
+
+        fun Row.fill(col: Int, st: XSSFCellStyle) =
+            createCell(col).apply { cellStyle = st }
+
+        fun sectionHeader(title: String) {
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 24f
+                row.cell(0, title, stSection)
+                merge(r, r, 0, 5)
+            }
         }
 
-        val valueStyle = workbook.createCellStyle().apply {
-            setFont(normalFont)
-            borderBottom = BorderStyle.THIN
-            borderTop = BorderStyle.THIN
-            borderLeft = BorderStyle.THIN
-            borderRight = BorderStyle.THIN
-            wrapText = true
+        fun orangeStripe() {
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 3f
+                for (c in 0..5) row.createCell(c).cellStyle = stOrangeBar
+            }
         }
 
-        val sectionHeaderStyle = workbook.createCellStyle().apply {
-            setFont(sectionFont)
-            borderBottom = BorderStyle.MEDIUM
-            bottomBorderColor = headerColor
+        val reportTitle = report.proyecto.ifBlank { report.title.ifBlank { "SIN NOMBRE" } }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // FILA 0 — ENCABEZADO: Logo + Título
+        // ══════════════════════════════════════════════════════════════════════
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 65f
+            row.fill(0, stHeaderFill)
+            row.fill(1, stHeaderFill)
+            merge(r, r, 0, 1)
+            row.cell(2, "REPORTE DIARIO DE OBRA\n$reportTitle", stHeader)
+            merge(r, r, 2, 5)
         }
 
-        // 1. Title Banner with Logo
-        val titleRow = sheet.createRow(0)
-        titleRow.heightInPoints = 50f
-        
-        // Load and place Logo in Col 0 (merged 0..1)
-        val headerDrawing = sheet.createDrawingPatriarch()
+        // Logo CEI sobre las celdas 0-1
         try {
             val logoResId = context.resources.getIdentifier("logocei", "drawable", context.packageName)
             if (logoResId != 0) {
@@ -98,447 +200,272 @@ object ExcelGenerator {
                 if (logoBmp != null) {
                     val logoStream = ByteArrayOutputStream()
                     logoBmp.compress(Bitmap.CompressFormat.PNG, 100, logoStream)
-                    val logoBytes = logoStream.toByteArray()
-                    val pictureIdx = workbook.addPicture(logoBytes, Workbook.PICTURE_TYPE_PNG)
-                    
+                    val pictureIdx = workbook.addPicture(logoStream.toByteArray(), Workbook.PICTURE_TYPE_PNG)
                     val anchor = workbook.creationHelper.createClientAnchor().apply {
-                        setCol1(0)
-                        setRow1(0)
-                        setCol2(2)
-                        setRow2(1)
+                        setCol1(0); setRow1(r); setCol2(2); setRow2(r + 1)
                     }
-                    headerDrawing.createPicture(anchor, pictureIdx)
+                    drawing.createPicture(anchor, pictureIdx)
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
+        r++
 
-        // Título al lado derecho (Col 2 a 5)
-        val titleCell = titleRow.createCell(2)
-        val reportTitle = report.proyecto.ifBlank { report.title.ifBlank { "REPORTE DIARIO" } }
-        titleCell.setCellValue("REPORTE DIARIO\n$reportTitle")
-        
-        // Estilo título centrado y ajustado
-        val titleStyleLogo = workbook.createCellStyle().apply {
-            fillForegroundColor = headerColor
-            fillPattern = FillPatternType.SOLID_FOREGROUND
-            alignment = HorizontalAlignment.CENTER
-            verticalAlignment = VerticalAlignment.CENTER
-            setFont(titleFont)
-            wrapText = true
+        // FILA 1 — Barra de subtítulo con fecha de generación
+        val nowShort = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 18f
+            row.fill(0, stHeaderFill); row.fill(1, stHeaderFill)
+            row.fill(2, stHeaderFill); row.fill(3, stHeaderFill)
+            merge(r, r, 0, 3)
+            row.cell(4, "Generado: $nowShort", stSubBar)
+            merge(r, r, 4, 5)
         }
-        titleCell.cellStyle = titleStyleLogo
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 2, 5))
-        
-        // Rellenar fondo del espacio del logo con el color del header
-        val cell0 = titleRow.createCell(0)
-        cell0.cellStyle = titleStyleLogo
-        val cell1 = titleRow.createCell(1)
-        cell1.cellStyle = titleStyleLogo
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 1))
+        r++
 
-        // 2. Metadata Info Block (Datos Generales - Two Columns Layout)
+        // Congelar las 2 primeras filas al hacer scroll
+        sheet.createFreezePane(0, 2)
+
+        // Raya naranja separadora
+        orangeStripe(); r++
+
+        // ══════════════════════════════════════════════════════════════════════
+        // DATOS GENERALES DEL PROYECTO
+        // ══════════════════════════════════════════════════════════════════════
+        sectionHeader("DATOS GENERALES DEL PROYECTO"); r++
+
         val leftFields = listOf(
-            "Proyecto:" to reportTitle,
-            "Fase:" to report.fase,
-            "Área:" to report.area,
-            "Sistema:" to report.sistema,
-            "Disciplina:" to report.disciplina,
+            "Proyecto:"    to reportTitle,
+            "Fase:"        to report.fase,
+            "Área:"        to report.area,
+            "Sistema:"     to report.sistema,
+            "Disciplina:"  to report.disciplina,
             "Responsable:" to report.technicianName
         )
-
         val rightFields = listOf(
-            "Fecha:" to report.date,
-            "No. Contrato:" to report.noContrato,
-            "Alcance:" to report.descripcionAlcance
+            "Fecha:"          to report.date,
+            "No. Contrato:"   to report.noContrato,
+            "Ubicación GPS:"  to report.location,
+            "Alcance:"        to report.descripcionAlcance
         )
 
-        var currentRow = 2
-        val maxRows = maxOf(leftFields.size, rightFields.size)
+        val maxMeta = maxOf(leftFields.size, rightFields.size)
+        for (i in 0 until maxMeta) {
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 20f
+                val vSt = if (i % 2 == 0) stValue else stValueZ
 
-        for (i in 0 until maxRows) {
-            val row = sheet.createRow(currentRow)
-            row.heightInPoints = 20f
+                if (i < leftFields.size) {
+                    val (lbl, v) = leftFields[i]
+                    row.cell(0, lbl, stLabel)
+                    row.cell(1, v, vSt); merge(r, r, 1, 2)
+                } else {
+                    row.fill(0, stLabel); row.fill(1, vSt); merge(r, r, 1, 2)
+                }
 
-            // Columna Izquierda (Key = Col 0, Value = Col 1, 2)
-            if (i < leftFields.size) {
-                val (label, value) = leftFields[i]
-                row.createCell(0).apply { setCellValue(label); cellStyle = labelStyle }
-                row.createCell(1).apply { setCellValue(value); cellStyle = valueStyle }
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+                if (i < rightFields.size) {
+                    val (lbl, v) = rightFields[i]
+                    row.cell(3, lbl, stLabel)
+                    row.cell(4, v, vSt); merge(r, r, 4, 5)
+                } else {
+                    row.fill(3, stLabel); row.fill(4, vSt); merge(r, r, 4, 5)
+                }
             }
-
-            // Columna Derecha (Key = Col 3, Value = Col 4, 5)
-            if (i < rightFields.size) {
-                val (label, value) = rightFields[i]
-                row.createCell(3).apply { setCellValue(label); cellStyle = labelStyle }
-                row.createCell(4).apply { setCellValue(value); cellStyle = valueStyle }
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
-            } else {
-                // Rellenar celdas derechas vacías para estética
-                row.createCell(3).apply { cellStyle = valueStyle }
-                row.createCell(4).apply { cellStyle = valueStyle }
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
-            }
-            currentRow++
+            r++
         }
+        r++
 
-        // 2.5 Apartado de Seguridad y Clima (Debajo de Datos Generales)
-        currentRow++
-        val secHeaderRow = sheet.createRow(currentRow)
-        secHeaderRow.heightInPoints = 22f
-        val secHeaderCell = secHeaderRow.createCell(0)
-        secHeaderCell.setCellValue("Seguridad y Condiciones Climáticas")
-        secHeaderCell.cellStyle = sectionHeaderStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-        currentRow++
+        // ══════════════════════════════════════════════════════════════════════
+        // SEGURIDAD Y CONDICIONES CLIMÁTICAS
+        // ══════════════════════════════════════════════════════════════════════
+        sectionHeader("SEGURIDAD Y CONDICIONES CLIMÁTICAS"); r++
 
-        // Fila de Clima con Iconos/Emojis
         val climaMap = mapOf(
-            "soleado"   to "☀️ Soleado",
-            "parcial"   to "⛅ Parcialmente Nublado",
-            "nublado"   to "☁️ Nublado",
-            "lluvioso" to "🌧️ Lluvioso",
-            "tormenta" to "⛈️ Tormenta Eléctrica",
-            "neblina"  to "🌫️ Neblina",
-            "ventoso"  to "💨 Ventoso",
-            "caluroso" to "🌡️ Caluroso",
+            "soleado"  to "☀️ Soleado",        "parcial"  to "⛅ Parc. Nublado",
+            "nublado"  to "☁️ Nublado",         "lluvioso" to "🌧️ Lluvioso",
+            "tormenta" to "⛈️ Tormenta",        "neblina"  to "🌫️ Neblina",
+            "ventoso"  to "💨 Ventoso",          "caluroso" to "🌡️ Caluroso",
             "frio"     to "❄️ Frío"
         )
+        val climaTexto = report.clima.joinToString("   |   ") { climaMap[it] ?: it }.ifBlank { "No especificado" }
 
-        val climaRow = sheet.createRow(currentRow)
-        climaRow.heightInPoints = 22f
-        val climaLabelCell = climaRow.createCell(0)
-        climaLabelCell.setCellValue("Condición Clima:")
-        climaLabelCell.cellStyle = labelStyle
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 22f
+            row.cell(0, "Condición Climática:", stLabel)
+            row.cell(1, climaTexto, stValue); merge(r, r, 1, 5)
+        }; r++
 
-        val climaTexto = if (report.clima.isNotEmpty()) {
-            report.clima.joinToString("   ") { id -> climaMap[id] ?: id }
-        } else {
-            "No especificado"
-        }
-
-        val climaValCell = climaRow.createCell(1)
-        climaValCell.setCellValue(climaTexto)
-        climaValCell.cellStyle = valueStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
-        currentRow++
-
-        // Sub-encabezado de Actividades de Seguridad
-        val segSubHeaderRow = sheet.createRow(currentRow)
-        segSubHeaderRow.heightInPoints = 20f
-        val segSubCell = segSubHeaderRow.createCell(0)
-        segSubCell.setCellValue("Actividades de Seguridad:")
-        segSubCell.cellStyle = labelStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-        currentRow++
+        // Sub-sección: Actividades de seguridad
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 20f
+            row.cell(0, "Actividades de Seguridad:", stColHeader); merge(r, r, 0, 5)
+        }; r++
 
         if (report.actividadesSeguridad.isNotEmpty()) {
-            report.actividadesSeguridad.forEachIndexed { index, segAct ->
-                val segRow = sheet.createRow(currentRow)
-                segRow.heightInPoints = 20f
-
-                val numCell = segRow.createCell(0)
-                numCell.setCellValue("${index + 1}.")
-                numCell.cellStyle = labelStyle
-
-                val actCell = segRow.createCell(1)
-                actCell.setCellValue(segAct)
-                actCell.cellStyle = valueStyle
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
-
-                currentRow++
+            report.actividadesSeguridad.forEachIndexed { idx, act ->
+                sheet.createRow(r).also { row ->
+                    row.heightInPoints = 20f
+                    val vSt = if (idx % 2 == 0) stValue else stValueZ
+                    row.cell(0, "${idx + 1}.", stLabel)
+                    row.cell(1, act, vSt); merge(r, r, 1, 5)
+                }; r++
             }
         } else {
-            val emptySegRow = sheet.createRow(currentRow)
-            emptySegRow.heightInPoints = 20f
-            val emptySegCell = emptySegRow.createCell(0)
-            emptySegCell.setCellValue("Sin actividades de seguridad registradas")
-            emptySegCell.cellStyle = valueStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-            currentRow++
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 18f
+                row.cell(0, "Sin actividades de seguridad registradas", stValue); merge(r, r, 0, 5)
+            }; r++
         }
+        r++
 
-        // 3. Actividades Realizadas Block (lista dinámica)
-        currentRow++
-        val actHeaderRow = sheet.createRow(currentRow)
-        actHeaderRow.heightInPoints = 22f
-        val actHeaderCell = actHeaderRow.createCell(0)
-        actHeaderCell.setCellValue("Actividades Realizadas")
-        actHeaderCell.cellStyle = sectionHeaderStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+        // ══════════════════════════════════════════════════════════════════════
+        // ACTIVIDADES REALIZADAS
+        // ══════════════════════════════════════════════════════════════════════
+        sectionHeader("ACTIVIDADES REALIZADAS"); r++
 
-        currentRow++
         if (report.actividadesRealizadas.isNotEmpty()) {
-            report.actividadesRealizadas.forEachIndexed { index, actividad ->
-                val actRow = sheet.createRow(currentRow)
-                actRow.heightInPoints = 22f
-
-                val numCell = actRow.createCell(0)
-                numCell.setCellValue("${index + 1}.")
-                numCell.cellStyle = labelStyle
-
-                val actCell = actRow.createCell(1)
-                actCell.setCellValue(actividad)
-                actCell.cellStyle = valueStyle
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
-
-                currentRow++
+            report.actividadesRealizadas.forEachIndexed { idx, act ->
+                sheet.createRow(r).also { row ->
+                    row.heightInPoints = 22f
+                    val vSt = if (idx % 2 == 0) stValue else stValueZ
+                    row.cell(0, "${idx + 1}.", stLabel)
+                    row.cell(1, act, vSt); merge(r, r, 1, 5)
+                }; r++
             }
         } else {
-            val emptyRow = sheet.createRow(currentRow)
-            emptyRow.heightInPoints = 20f
-            val emptyCell = emptyRow.createCell(0)
-            emptyCell.setCellValue("Sin actividades registradas")
-            emptyCell.cellStyle = valueStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-            currentRow++
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 18f
+                row.cell(0, "Sin actividades registradas", stValue); merge(r, r, 0, 5)
+            }; r++
         }
+        r++
 
-        // 4. Observaciones Block (lista dinámica)
-        currentRow++
-        val obsHeaderRow = sheet.createRow(currentRow)
-        obsHeaderRow.heightInPoints = 22f
-        val obsHeaderCell = obsHeaderRow.createCell(0)
-        obsHeaderCell.setCellValue("Observaciones y Notas de Campo")
-        obsHeaderCell.cellStyle = sectionHeaderStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-
-        currentRow++
+        // ══════════════════════════════════════════════════════════════════════
+        // OBSERVACIONES Y NOTAS DE CAMPO
+        // ══════════════════════════════════════════════════════════════════════
         if (report.observacionesList.isNotEmpty()) {
-            report.observacionesList.forEachIndexed { index, obs ->
-                val obsRow = sheet.createRow(currentRow)
-                obsRow.heightInPoints = 22f
-
-                val numCell = obsRow.createCell(0)
-                numCell.setCellValue("${index + 1}.")
-                numCell.cellStyle = labelStyle
-
-                val obsCell = obsRow.createCell(1)
-                obsCell.setCellValue(obs)
-                obsCell.cellStyle = valueStyle
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
-
-                currentRow++
+            sectionHeader("OBSERVACIONES Y NOTAS DE CAMPO"); r++
+            report.observacionesList.forEachIndexed { idx, obs ->
+                sheet.createRow(r).also { row ->
+                    row.heightInPoints = 22f
+                    val vSt = if (idx % 2 == 0) stValue else stValueZ
+                    row.cell(0, "${idx + 1}.", stLabel)
+                    row.cell(1, obs, vSt); merge(r, r, 1, 5)
+                }; r++
             }
-        } else {
-            val emptyRow = sheet.createRow(currentRow)
-            emptyRow.heightInPoints = 20f
-            val emptyCell = emptyRow.createCell(0)
-            emptyCell.setCellValue("Sin observaciones registradas")
-            emptyCell.cellStyle = valueStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-            currentRow++
+            r++
         }
 
-        currentRow++
+        // ══════════════════════════════════════════════════════════════════════
+        // FUERZA DE TRABAJO
+        // ══════════════════════════════════════════════════════════════════════
+        sectionHeader("FUERZA DE TRABAJO"); r++
 
-        // 5. Fuerza de Trabajo Block
+        // Encabezado de columnas
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 22f
+            row.cell(0, "Rol / Puesto",  stColHeader); merge(r, r, 0, 2)
+            row.cell(3, "Cantidad",      stColHeader); merge(r, r, 3, 4)
+            row.cell(5, "Horas Trab.",   stColHeader)
+        }; r++
+
         val rolesNombres = listOf(
-            "Sp. Seg.", "Residente", "O.P.", "Topógrafo", "Cadenero",
-            "Oficiales", "Ayudante", "Banderero", "Sup. Obra", "Sup. Calidad"
+            "Sup. Seguridad", "Residente de Obra", "Op. de Planta",
+            "Topógrafo", "Cadenero", "Oficiales",
+            "Ayudantes", "Banderero", "Sup. de Obra", "Sup. Calidad"
         )
 
-        val workforceHeaderRow = sheet.createRow(currentRow)
-        workforceHeaderRow.heightInPoints = 22f
-        val workforceHeaderCell = workforceHeaderRow.createCell(0)
-        workforceHeaderCell.setCellValue("Fuerza de Trabajo")
-        workforceHeaderCell.cellStyle = sectionHeaderStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-        currentRow++
+        var totalCantWf = 0; var totalHrsWf = 0.0
+        rolesNombres.forEachIndexed { idx, rol ->
+            val cant = report.fuerzaTrabajoCantidades.getOrElse(idx) { "" }.toIntOrNull() ?: 0
+            val hor  = report.fuerzaTrabajoHoras.getOrElse(idx)       { "" }.toDoubleOrNull() ?: 0.0
+            totalCantWf += cant; totalHrsWf += hor
 
-        // Sub-encabezado de columnas
-        val wfColHeaderRow = sheet.createRow(currentRow)
-        wfColHeaderRow.heightInPoints = 20f
-        wfColHeaderRow.createCell(0).apply {
-            setCellValue("Rol / Puesto")
-            cellStyle = labelStyle
-        }
-        wfColHeaderRow.createCell(1).apply {
-            setCellValue("Cantidad")
-            cellStyle = labelStyle
-        }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
-        wfColHeaderRow.createCell(3).apply {
-            setCellValue("Horas")
-            cellStyle = labelStyle
-        }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-        currentRow++
-
-        // Filas de cada rol
-        var totalCantidadWf = 0
-        var totalHorasWf = 0.0
-        rolesNombres.forEachIndexed { index, rol ->
-            val wfRow = sheet.createRow(currentRow)
-            wfRow.heightInPoints = 20f
-
-            val cantStr = report.fuerzaTrabajoCantidades.getOrElse(index) { "" }
-            val horStr = report.fuerzaTrabajoHoras.getOrElse(index) { "" }
-            val cant = cantStr.toIntOrNull() ?: 0
-            val hor = horStr.toDoubleOrNull() ?: 0.0
-            totalCantidadWf += cant
-            totalHorasWf += hor
-
-            wfRow.createCell(0).apply { setCellValue(rol); cellStyle = labelStyle }
-            wfRow.createCell(1).apply { setCellValue(cant.toDouble()); cellStyle = valueStyle }
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
-            wfRow.createCell(3).apply { setCellValue(hor); cellStyle = valueStyle }
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-            currentRow++
+            val vSt  = if (idx % 2 == 0) stValue  else stValueZ
+            val vStC = if (idx % 2 == 0) stValueC else stValueCZ
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 20f
+                row.cell(0, rol,             stLabel);  merge(r, r, 0, 2)
+                row.cell(3, cant.toDouble(), vStC);     merge(r, r, 3, 4)
+                row.cell(5, hor,             vStC)
+            }; r++
         }
 
-        // Fila de totales
-        val wfTotalRow = sheet.createRow(currentRow)
-        wfTotalRow.heightInPoints = 22f
-        wfTotalRow.createCell(0).apply { setCellValue("TOTAL"); cellStyle = labelStyle }
-        wfTotalRow.createCell(1).apply { setCellValue(totalCantidadWf.toDouble()); cellStyle = labelStyle }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
-        wfTotalRow.createCell(3).apply { setCellValue(totalHorasWf); cellStyle = labelStyle }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-        currentRow++
+        // Fila TOTAL naranja
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 24f
+            row.cell(0, "TOTAL FUERZA DE TRABAJO",        stTotal); merge(r, r, 0, 2)
+            row.cell(3, totalCantWf.toDouble(),            stTotal); merge(r, r, 3, 4)
+            row.cell(5, "${"%.1f".format(totalHrsWf)} hrs", stTotal)
+        }; r += 2
 
-        // Total HH
-        val hhRow = sheet.createRow(currentRow)
-        hhRow.heightInPoints = 24f
-        hhRow.createCell(0).apply { setCellValue("Total de HH"); cellStyle = sectionHeaderStyle }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 2))
-        hhRow.createCell(3).apply {
-            setCellValue("${"%.1f".format(totalHorasWf)} hrs")
-            cellStyle = sectionHeaderStyle
-        }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-        currentRow += 2
+        // ══════════════════════════════════════════════════════════════════════
+        // MAQUINARIA UTILIZADA
+        // ══════════════════════════════════════════════════════════════════════
+        sectionHeader("MAQUINARIA UTILIZADA"); r++
 
-        // 6. Maquinaria Utilizada Block
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 22f
+            row.cell(0, "Maquinaria / Equipo", stColHeader); merge(r, r, 0, 2)
+            row.cell(3, "Cantidad",            stColHeader); merge(r, r, 3, 4)
+            row.cell(5, "Horas Máq.",          stColHeader)
+        }; r++
+
         val equiposNombres = listOf(
             "Bailarina", "Hormigonera", "Minicar", "Vehículos",
             "Generador", "Rotomartillo", "Compresor"
         )
 
-        val machineryHeaderRow = sheet.createRow(currentRow)
-        machineryHeaderRow.heightInPoints = 22f
-        val machineryHeaderCell = machineryHeaderRow.createCell(0)
-        machineryHeaderCell.setCellValue("Maquinaria Utilizada")
-        machineryHeaderCell.cellStyle = sectionHeaderStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-        currentRow++
+        var totalCantMac = 0; var totalHrsMac = 0.0
+        equiposNombres.forEachIndexed { idx, equipo ->
+            val cant = report.maquinariaCantidades.getOrElse(idx) { "" }.toIntOrNull() ?: 0
+            val hor  = report.maquinariaHoras.getOrElse(idx)      { "" }.toDoubleOrNull() ?: 0.0
+            totalCantMac += cant; totalHrsMac += hor
 
-        // Sub-encabezado de columnas
-        val macColHeaderRow = sheet.createRow(currentRow)
-        macColHeaderRow.heightInPoints = 20f
-        macColHeaderRow.createCell(0).apply {
-            setCellValue("Maquinaria / Equipo")
-            cellStyle = labelStyle
-        }
-        macColHeaderRow.createCell(1).apply {
-            setCellValue("Cantidad")
-            cellStyle = labelStyle
-        }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
-        macColHeaderRow.createCell(3).apply {
-            setCellValue("Horas")
-            cellStyle = labelStyle
-        }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-        currentRow++
-
-        // Filas de cada equipo
-        var totalCantidadMac = 0
-        var totalHorasMac = 0.0
-        equiposNombres.forEachIndexed { index, equipo ->
-            val macRow = sheet.createRow(currentRow)
-            macRow.heightInPoints = 20f
-
-            val cantStr = report.maquinariaCantidades.getOrElse(index) { "" }
-            val horStr = report.maquinariaHoras.getOrElse(index) { "" }
-            val cant = cantStr.toIntOrNull() ?: 0
-            val hor = horStr.toDoubleOrNull() ?: 0.0
-            totalCantidadMac += cant
-            totalHorasMac += hor
-
-            macRow.createCell(0).apply { setCellValue(equipo); cellStyle = labelStyle }
-            macRow.createCell(1).apply { setCellValue(cant.toDouble()); cellStyle = valueStyle }
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
-            macRow.createCell(3).apply { setCellValue(hor); cellStyle = valueStyle }
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-            currentRow++
+            val vSt  = if (idx % 2 == 0) stValue  else stValueZ
+            val vStC = if (idx % 2 == 0) stValueC else stValueCZ
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 20f
+                row.cell(0, equipo,          stLabel);  merge(r, r, 0, 2)
+                row.cell(3, cant.toDouble(), vStC);     merge(r, r, 3, 4)
+                row.cell(5, hor,             vStC)
+            }; r++
         }
 
-        // Fila de totales
-        val macTotalRow = sheet.createRow(currentRow)
-        macTotalRow.heightInPoints = 22f
-        macTotalRow.createCell(0).apply { setCellValue("TOTAL"); cellStyle = labelStyle }
-        macTotalRow.createCell(1).apply { setCellValue(totalCantidadMac.toDouble()); cellStyle = labelStyle }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
-        macTotalRow.createCell(3).apply { setCellValue(totalHorasMac); cellStyle = labelStyle }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-        currentRow++
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 24f
+            row.cell(0, "TOTAL MAQUINARIA",                stTotal); merge(r, r, 0, 2)
+            row.cell(3, totalCantMac.toDouble(),            stTotal); merge(r, r, 3, 4)
+            row.cell(5, "${"%.1f".format(totalHrsMac)} hrs", stTotal)
+        }; r += 2
 
-        // Total HM
-        val hmRow = sheet.createRow(currentRow)
-        hmRow.heightInPoints = 24f
-        hmRow.createCell(0).apply { setCellValue("Total de HM"); cellStyle = sectionHeaderStyle }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 2))
-        hmRow.createCell(3).apply {
-            setCellValue("${"%.1f".format(totalHorasMac)} hrs")
-            cellStyle = sectionHeaderStyle
-        }
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-        currentRow += 2
+        // ══════════════════════════════════════════════════════════════════════
+        // ACTIVIDADES PLANEADAS — SIGUIENTE DÍA
+        // ══════════════════════════════════════════════════════════════════════
+        sectionHeader("ACTIVIDADES PLANEADAS — SIGUIENTE DÍA"); r++
 
-        // 7. Actividades Planeadas Block
-        currentRow++
-        val planHeaderRow = sheet.createRow(currentRow)
-        planHeaderRow.heightInPoints = 22f
-        val planHeaderCell = planHeaderRow.createCell(0)
-        planHeaderCell.setCellValue("Actividades Planeadas para el Siguiente Día")
-        planHeaderCell.cellStyle = sectionHeaderStyle
-        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-
-        currentRow++
         if (report.actividadesPlaneadas.isNotEmpty()) {
-            report.actividadesPlaneadas.forEachIndexed { index, actividad ->
-                val planRow = sheet.createRow(currentRow)
-                planRow.heightInPoints = 22f
-
-                val numCell = planRow.createCell(0)
-                numCell.setCellValue("${index + 1}.")
-                numCell.cellStyle = labelStyle
-
-                val actCell = planRow.createCell(1)
-                actCell.setCellValue(actividad)
-                actCell.cellStyle = valueStyle
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
-
-                currentRow++
+            report.actividadesPlaneadas.forEachIndexed { idx, act ->
+                sheet.createRow(r).also { row ->
+                    row.heightInPoints = 22f
+                    val vSt = if (idx % 2 == 0) stValue else stValueZ
+                    row.cell(0, "${idx + 1}.", stLabel)
+                    row.cell(1, act, vSt); merge(r, r, 1, 5)
+                }; r++
             }
         } else {
-            val emptyRow = sheet.createRow(currentRow)
-            emptyRow.heightInPoints = 20f
-            val emptyCell = emptyRow.createCell(0)
-            emptyCell.setCellValue("Sin actividades planeadas registradas")
-            emptyCell.cellStyle = valueStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-            currentRow++
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 18f
+                row.cell(0, "Sin actividades planeadas registradas", stValue); merge(r, r, 0, 5)
+            }; r++
         }
+        r++
 
-        currentRow++
-
-        // Helper for Drawing Pictures
-        val drawing = sheet.createDrawingPatriarch()
-
-        // 8. Evidencias Fotográficas con Descripción
+        // ══════════════════════════════════════════════════════════════════════
+        // EVIDENCIAS FOTOGRÁFICAS
+        // ══════════════════════════════════════════════════════════════════════
         if (report.photos.isNotEmpty()) {
-            val photoHeaderRow = sheet.createRow(currentRow)
-            photoHeaderRow.heightInPoints = 22f
-            val photoHeaderCell = photoHeaderRow.createCell(0)
-            photoHeaderCell.setCellValue("Evidencias Fotográficas")
-            photoHeaderCell.cellStyle = sectionHeaderStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-
-            currentRow += 2
+            sectionHeader("EVIDENCIAS FOTOGRÁFICAS"); r++
+            r++ // espacio
 
             var photoCol = 0
             report.photos.forEachIndexed { index, photoPath ->
@@ -547,225 +474,182 @@ object ExcelGenerator {
 
                 if (file.exists()) {
                     try {
-                        val bytes = compressImage(file, 400, 300)
+                        val bytes = compressImage(file, 500, 375)
                         if (bytes != null) {
                             val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_JPEG)
                             val anchor = workbook.creationHelper.createClientAnchor().apply {
-                                setCol1(photoCol)
-                                setRow1(currentRow)
-                                setCol2(photoCol + 3)
-                                setRow2(currentRow + 8)
+                                setCol1(photoCol); setRow1(r)
+                                setCol2(photoCol + 3); setRow2(r + 9)
                             }
                             drawing.createPicture(anchor, pictureIdx)
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    } catch (e: Exception) { e.printStackTrace() }
                 }
 
-                // Pie de foto debajo de la imagen
                 if (caption.isNotBlank()) {
-                    val capRow = sheet.getRow(currentRow + 8) ?: sheet.createRow(currentRow + 8)
+                    val capRow = sheet.getRow(r + 9) ?: sheet.createRow(r + 9)
                     capRow.heightInPoints = 18f
-                    val capCell = capRow.createCell(photoCol)
-                    capCell.setCellValue("Nota: $caption")
-                    capCell.cellStyle = valueStyle
-                    sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow + 8, currentRow + 8, photoCol, photoCol + 2))
+                    capRow.createCell(photoCol).apply {
+                        setCellValue("📷 $caption"); cellStyle = stValue
+                    }
+                    sheet.addMergedRegion(
+                        org.apache.poi.ss.util.CellRangeAddress(r + 9, r + 9, photoCol, photoCol + 2)
+                    )
                 }
 
                 photoCol += 3
-                if (photoCol >= 6) {
-                    photoCol = 0
-                    currentRow += 10
-                }
+                if (photoCol >= 6) { photoCol = 0; r += 11 }
             }
-            if (photoCol != 0) {
-                currentRow += 10
-            }
-            currentRow++
+            if (photoCol != 0) r += 11
+            r++
         }
 
-        // 9. Croquis Descriptivo Section
+        // ══════════════════════════════════════════════════════════════════════
+        // CROQUIS DESCRIPTIVO
+        // ══════════════════════════════════════════════════════════════════════
         if (!report.croquisPath.isNullOrEmpty()) {
             val croquisFile = File(report.croquisPath)
             if (croquisFile.exists()) {
-                val croquisHeaderRow = sheet.createRow(currentRow)
-                croquisHeaderRow.heightInPoints = 22f
-                val croquisHeaderCell = croquisHeaderRow.createCell(0)
-                croquisHeaderCell.setCellValue("Croquis Descriptivo")
-                croquisHeaderCell.cellStyle = sectionHeaderStyle
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-
-                currentRow += 2
-
+                sectionHeader("CROQUIS DESCRIPTIVO"); r++
+                r++
                 try {
-                    val bytes = compressImage(croquisFile, 600, 400)
+                    val bytes = compressImage(croquisFile, 700, 500)
                     if (bytes != null) {
                         val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_JPEG)
                         val anchor = workbook.creationHelper.createClientAnchor().apply {
-                            setCol1(0)
-                            setRow1(currentRow)
-                            setCol2(6)
-                            setRow2(currentRow + 12)
+                            setCol1(0); setRow1(r); setCol2(6); setRow2(r + 15)
                         }
                         drawing.createPicture(anchor, pictureIdx)
-                        currentRow += 13
+                        r += 16
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                currentRow++
+                } catch (e: Exception) { e.printStackTrace() }
+                r++
             }
         }
 
-        // 10. Avance por Área
+        // ══════════════════════════════════════════════════════════════════════
+        // AVANCE POR ÁREA / DISCIPLINA
+        // ══════════════════════════════════════════════════════════════════════
         if (report.areasAvance.isNotEmpty() && report.areasAvance.any { it.isNotBlank() }) {
-            val avanceHeaderRow = sheet.createRow(currentRow)
-            avanceHeaderRow.heightInPoints = 22f
-            val avanceHeaderCell = avanceHeaderRow.createCell(0)
-            avanceHeaderCell.setCellValue("Avance por Área / Disciplina")
-            avanceHeaderCell.cellStyle = sectionHeaderStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-            currentRow++
+            sectionHeader("AVANCE POR ÁREA / DISCIPLINA"); r++
 
-            // Sub-encabezado
-            val avanceColHeader = sheet.createRow(currentRow)
-            avanceColHeader.heightInPoints = 20f
-            avanceColHeader.createCell(0).apply { setCellValue("Área / Disciplina"); cellStyle = labelStyle }
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 3))
-            avanceColHeader.createCell(4).apply { setCellValue("% Avance"); cellStyle = labelStyle }
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
-            currentRow++
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 22f
+                row.cell(0, "Área / Disciplina", stColHeader); merge(r, r, 0, 4)
+                row.cell(5, "% Avance",          stColHeader)
+            }; r++
 
-            report.areasAvance.forEachIndexed { index, area ->
+            report.areasAvance.forEachIndexed { idx, area ->
                 if (area.isNotBlank()) {
-                    val pct = report.avancePorcentajes.getOrElse(index) { "0" }
-                    val avRow = sheet.createRow(currentRow)
-                    avRow.heightInPoints = 20f
-                    avRow.createCell(0).apply { setCellValue(area); cellStyle = valueStyle }
-                    sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 3))
-                    avRow.createCell(4).apply { setCellValue("$pct%"); cellStyle = valueStyle }
-                    sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
-                    currentRow++
+                    val pct  = report.avancePorcentajes.getOrElse(idx) { "0" }
+                    val vSt  = if (idx % 2 == 0) stValue  else stValueZ
+                    val vStC = if (idx % 2 == 0) stValueC else stValueCZ
+                    sheet.createRow(r).also { row ->
+                        row.heightInPoints = 20f
+                        row.cell(0, area,    vSt);  merge(r, r, 0, 4)
+                        row.cell(5, "$pct%", vStC)
+                    }; r++
                 }
             }
-            currentRow++
+            r++
         }
 
-        // 11. Firmas de Conformidad (Supervisor y Contratista)
-        val hasSupervisorSig = !report.supervisorSignaturePath.isNullOrEmpty() && File(report.supervisorSignaturePath).exists()
-        val hasContractorSig = !report.signaturePath.isNullOrEmpty() && File(report.signaturePath).exists()
+        // ══════════════════════════════════════════════════════════════════════
+        // FIRMAS DE CONFORMIDAD
+        // ══════════════════════════════════════════════════════════════════════
+        val hasSuperSig    = !report.supervisorSignaturePath.isNullOrEmpty() &&
+                              File(report.supervisorSignaturePath!!).exists()
+        val hasContractSig = !report.signaturePath.isNullOrEmpty() &&
+                              File(report.signaturePath!!).exists()
 
-        if (hasSupervisorSig || hasContractorSig) {
-            val sigHeaderRow = sheet.createRow(currentRow)
-            sigHeaderRow.heightInPoints = 22f
-            val sigHeaderCell = sigHeaderRow.createCell(0)
-            sigHeaderCell.setCellValue("Firmas de Conformidad")
-            sigHeaderCell.cellStyle = sectionHeaderStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
-            currentRow += 2
+        if (hasSuperSig || hasContractSig) {
+            sectionHeader("FIRMAS DE CONFORMIDAD"); r++
+            r++ // espacio antes de las firmas
 
-            val imageRow = currentRow
-            // Firma del Supervisor (Columnas 0 a 2)
-            if (hasSupervisorSig) {
-                val file = File(report.supervisorSignaturePath!!)
+            val sigStartRow = r
+
+            if (hasSuperSig) {
                 try {
-                    val bytes = compressImage(file, 200, 100)
+                    val bytes = compressImage(File(report.supervisorSignaturePath!!), 280, 130)
                     if (bytes != null) {
                         val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG)
                         val anchor = workbook.creationHelper.createClientAnchor().apply {
-                            setCol1(0)
-                            setRow1(imageRow)
-                            setCol2(3)
-                            setRow2(imageRow + 4)
+                            setCol1(0); setRow1(sigStartRow); setCol2(3); setRow2(sigStartRow + 5)
                         }
                         drawing.createPicture(anchor, pictureIdx)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                } catch (e: Exception) { e.printStackTrace() }
             }
 
-            // Firma del Contratista (Columnas 3 a 5)
-            if (hasContractorSig) {
-                val file = File(report.signaturePath!!)
+            if (hasContractSig) {
                 try {
-                    val bytes = compressImage(file, 200, 100)
+                    val bytes = compressImage(File(report.signaturePath!!), 280, 130)
                     if (bytes != null) {
                         val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG)
                         val anchor = workbook.creationHelper.createClientAnchor().apply {
-                            setCol1(3)
-                            setRow1(imageRow)
-                            setCol2(6)
-                            setRow2(imageRow + 4)
+                            setCol1(3); setRow1(sigStartRow); setCol2(6); setRow2(sigStartRow + 5)
                         }
                         drawing.createPicture(anchor, pictureIdx)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                } catch (e: Exception) { e.printStackTrace() }
             }
 
-            currentRow += 4
+            r += 5
 
-            // Fila de nombres debajo de las firmas
-            val namesRow = sheet.createRow(currentRow)
-            namesRow.heightInPoints = 20f
+            // Línea de firma + nombre
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 22f
+                val supName = report.supervisor.ifBlank { "Supervisor" }
+                val conName = report.technicianName.ifBlank { "Responsable de Contratista" }
+                row.createCell(0).apply { setCellValue(supName); cellStyle = stSignLine }
+                merge(r, r, 0, 2)
+                row.createCell(3).apply { setCellValue(conName); cellStyle = stSignLine }
+                merge(r, r, 3, 5)
+            }; r++
 
-            val supCell = namesRow.createCell(0)
-            supCell.setCellValue("Supervisor: ${report.supervisor.ifBlank { "N/A" }}")
-            supCell.cellStyle = labelStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 2))
-
-            val conCell = namesRow.createCell(3)
-            conCell.setCellValue("Resp. Contratista: ${report.technicianName.ifBlank { "N/A" }}")
-            conCell.cellStyle = labelStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
-
-            currentRow += 2
+            // Cargo
+            sheet.createRow(r).also { row ->
+                row.heightInPoints = 16f
+                row.cell(0, "Supervisor de Proyecto",    stCargo); merge(r, r, 0, 2)
+                row.cell(3, "Responsable de Contratista", stCargo); merge(r, r, 3, 5)
+            }; r += 2
         }
 
-        // Set column widths
-        sheet.setColumnWidth(0, 4500)
-        for (i in 1..5) {
-            sheet.setColumnWidth(i, 4000)
+        // ══════════════════════════════════════════════════════════════════════
+        // PIE DE PÁGINA
+        // ══════════════════════════════════════════════════════════════════════
+        orangeStripe(); r++
+
+        val nowFull = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date())
+        sheet.createRow(r).also { row ->
+            row.heightInPoints = 18f
+            row.cell(0, "Generado por CEIReport   •   $nowFull   •   Documento Confidencial", stFooter)
+            merge(r, r, 0, 5)
         }
 
-        // Output file
+        // ── Guardar archivo ────────────────────────────────────────────────────
         val outputDir = File(context.getExternalFilesDir(null), "Reports")
         if (!outputDir.exists()) outputDir.mkdirs()
-        val file = File(outputDir, "Reporte_${report.id}_${System.currentTimeMillis()}.xlsx")
-        FileOutputStream(file).use { out ->
-            workbook.write(out)
-        }
+        val outFile = File(outputDir, "Reporte_${report.id}_${System.currentTimeMillis()}.xlsx")
+        FileOutputStream(outFile).use { workbook.write(it) }
         workbook.close()
-
-        return file
+        return outFile
     }
 
+    // ── Compresión de imágenes ─────────────────────────────────────────────────
     private fun compressImage(file: File, width: Int, height: Int): ByteArray? {
-        val options = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, opts)
+        var sample = 1
+        if (opts.outHeight > height || opts.outWidth > width) {
+            val hh = opts.outHeight / 2; val hw = opts.outWidth / 2
+            while ((hh / sample) >= height && (hw / sample) >= width) sample *= 2
         }
-        BitmapFactory.decodeFile(file.absolutePath, options)
-        
-        var inSampleSize = 1
-        if (options.outHeight > height || options.outWidth > width) {
-            val halfHeight = options.outHeight / 2
-            val halfWidth = options.outWidth / 2
-            while ((halfHeight / inSampleSize) >= height && (halfWidth / inSampleSize) >= width) {
-                inSampleSize *= 2
-            }
-        }
-
-        options.inJustDecodeBounds = false
-        options.inSampleSize = inSampleSize
-        val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
-
+        opts.inJustDecodeBounds = false; opts.inSampleSize = sample
+        val bmp = BitmapFactory.decodeFile(file.absolutePath, opts) ?: return null
         val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
-        val bytes = stream.toByteArray()
-        bitmap.recycle()
-        return bytes
+        bmp.compress(Bitmap.CompressFormat.JPEG, 85, stream)
+        bmp.recycle()
+        return stream.toByteArray()
     }
 }
