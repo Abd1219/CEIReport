@@ -138,32 +138,49 @@ object ExcelGenerator {
         cell1.cellStyle = titleStyleLogo
         sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 1))
 
-        // 2. Metadata Info Block (Datos Generales)
-        val fields = mutableListOf(
+        // 2. Metadata Info Block (Datos Generales - Two Columns Layout)
+        val leftFields = listOf(
             "Proyecto:" to reportTitle,
-            "Fecha:" to report.date,
-            "Supervisor:" to report.supervisor,
-            "Resp. Contratista:" to report.technicianName,
-            "Ubicación (GPS):" to report.location
+            "Fase:" to report.fase,
+            "Área:" to report.area,
+            "Sistema:" to report.sistema,
+            "Disciplina:" to report.disciplina,
+            "Responsable:" to report.technicianName
         )
-        if (report.noContrato.isNotBlank()) {
-            fields.add("No. Contrato:" to report.noContrato)
-        }
+
+        val rightFields = listOf(
+            "Fecha:" to report.date,
+            "No. Contrato:" to report.noContrato,
+            "Alcance:" to report.descripcionAlcance
+        )
 
         var currentRow = 2
-        for ((label, value) in fields) {
+        val maxRows = maxOf(leftFields.size, rightFields.size)
+
+        for (i in 0 until maxRows) {
             val row = sheet.createRow(currentRow)
             row.heightInPoints = 20f
 
-            val cellLabel = row.createCell(0)
-            cellLabel.setCellValue(label)
-            cellLabel.cellStyle = labelStyle
+            // Columna Izquierda (Key = Col 0, Value = Col 1, 2)
+            if (i < leftFields.size) {
+                val (label, value) = leftFields[i]
+                row.createCell(0).apply { setCellValue(label); cellStyle = labelStyle }
+                row.createCell(1).apply { setCellValue(value); cellStyle = valueStyle }
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 2))
+            }
 
-            val cellValue = row.createCell(1)
-            cellValue.setCellValue(value)
-            cellValue.cellStyle = valueStyle
-            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
-
+            // Columna Derecha (Key = Col 3, Value = Col 4, 5)
+            if (i < rightFields.size) {
+                val (label, value) = rightFields[i]
+                row.createCell(3).apply { setCellValue(label); cellStyle = labelStyle }
+                row.createCell(4).apply { setCellValue(value); cellStyle = valueStyle }
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
+            } else {
+                // Rellenar celdas derechas vacías para estética
+                row.createCell(3).apply { cellStyle = valueStyle }
+                row.createCell(4).apply { cellStyle = valueStyle }
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
+            }
             currentRow++
         }
 
