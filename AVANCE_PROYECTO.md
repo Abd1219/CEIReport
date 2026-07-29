@@ -87,6 +87,11 @@
 
 ## 📅 Historial de Actualizaciones Recientes
 
+- **[2026-07-28]** *(Sesión 8 - Rediseño Profesional de Excel y Organización de Datos Generales)*:
+  - **Rediseño Corporativo de Excel**: Actualización completa de `ExcelGenerator` aplicando la paleta de colores oficial de CEI (Azul `#1A3C6E`, Azul medio `#2E5FA3` y Naranja `#E87722`).
+  - **Estructura Visual Profesional**: Implementación de filas alternadas (zebra), encabezados de sección en banda completa, celdas de totales destacadas en naranja CEI, tipografía Calibri con jerarquía visual y congelación de paneles superiores al hacer scroll.
+  - **Organización de Datos Generales**: Maquetación limpia en 2 columnas (izquierda: Proyecto, Fase, Área, Sistema, Disciplina, Responsable; derecha: Fecha, No. Contrato, Ubicación GPS, Alcance).
+  - **Firmas y Pie de Página**: Integración de líneas de firma formales con nombres/cargos y pie de página con marca de agua "Documento Confidencial" y timestamp exacto.
 - **[2026-07-28]** *(Sesión 7 - Firma Única, Corrección SignaturePad, Logo en Excel, Soporte Dark Mode y Alertas de Llenado)*:
   - **Firma Única**: Removida la firma del contratista de la Pantalla 7 (Evidencias) puesto que ya existe en la Pantalla 8 (Finalización).
   - **Corrección de SignaturePad**: Rediseñado el motor de dibujo digital para capturar las dimensiones dinámicas del Canvas y escalar las coordenadas 1:1, previniendo que la firma se recorte o desplace a la derecha.
