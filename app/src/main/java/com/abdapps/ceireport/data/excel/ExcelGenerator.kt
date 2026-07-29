@@ -89,17 +89,22 @@ object ExcelGenerator {
         val titleRow = sheet.createRow(0)
         titleRow.heightInPoints = 40f
         val titleCell = titleRow.createCell(0)
-        titleCell.setCellValue("REPORTE DIARIO CEI")
+        val reportTitle = report.proyecto.ifBlank { report.title.ifBlank { "REPORTE DIARIO" } }
+        titleCell.setCellValue("REPORTE DIARIO - $reportTitle")
         titleCell.cellStyle = titleStyle
         sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 5))
 
-        // 2. Metadata Info Block
-        val fields = listOf(
-            "Título:" to report.title,
+        // 2. Metadata Info Block (Datos Generales)
+        val fields = mutableListOf(
+            "Proyecto:" to reportTitle,
             "Fecha:" to report.date,
-            "Técnico:" to report.technicianName,
-            "Ubicación:" to report.location
+            "Supervisor:" to report.supervisor,
+            "Resp. Contratista:" to report.technicianName,
+            "Ubicación (GPS):" to report.location
         )
+        if (report.noContrato.isNotBlank()) {
+            fields.add("No. Contrato:" to report.noContrato)
+        }
 
         var currentRow = 2
         for ((label, value) in fields) {
@@ -115,6 +120,82 @@ object ExcelGenerator {
             cellValue.cellStyle = valueStyle
             sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
 
+            currentRow++
+        }
+
+        // 2.5 Apartado de Seguridad y Clima (Debajo de Datos Generales)
+        currentRow++
+        val secHeaderRow = sheet.createRow(currentRow)
+        secHeaderRow.heightInPoints = 22f
+        val secHeaderCell = secHeaderRow.createCell(0)
+        secHeaderCell.setCellValue("Seguridad y Condiciones Climáticas")
+        secHeaderCell.cellStyle = sectionHeaderStyle
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+        currentRow++
+
+        // Fila de Clima con Iconos/Emojis
+        val climaMap = mapOf(
+            "soleado"   to "☀️ Soleado",
+            "parcial"   to "⛅ Parcialmente Nublado",
+            "nublado"   to "☁️ Nublado",
+            "lluvioso" to "🌧️ Lluvioso",
+            "tormenta" to "⛈️ Tormenta Eléctrica",
+            "neblina"  to "🌫️ Neblina",
+            "ventoso"  to "💨 Ventoso",
+            "caluroso" to "🌡️ Caluroso",
+            "frio"     to "❄️ Frío"
+        )
+
+        val climaRow = sheet.createRow(currentRow)
+        climaRow.heightInPoints = 22f
+        val climaLabelCell = climaRow.createCell(0)
+        climaLabelCell.setCellValue("Condición Clima:")
+        climaLabelCell.cellStyle = labelStyle
+
+        val climaTexto = if (report.clima.isNotEmpty()) {
+            report.clima.joinToString("   ") { id -> climaMap[id] ?: id }
+        } else {
+            "No especificado"
+        }
+
+        val climaValCell = climaRow.createCell(1)
+        climaValCell.setCellValue(climaTexto)
+        climaValCell.cellStyle = valueStyle
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
+        currentRow++
+
+        // Sub-encabezado de Actividades de Seguridad
+        val segSubHeaderRow = sheet.createRow(currentRow)
+        segSubHeaderRow.heightInPoints = 20f
+        val segSubCell = segSubHeaderRow.createCell(0)
+        segSubCell.setCellValue("Actividades de Seguridad:")
+        segSubCell.cellStyle = labelStyle
+        sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+        currentRow++
+
+        if (report.actividadesSeguridad.isNotEmpty()) {
+            report.actividadesSeguridad.forEachIndexed { index, segAct ->
+                val segRow = sheet.createRow(currentRow)
+                segRow.heightInPoints = 20f
+
+                val numCell = segRow.createCell(0)
+                numCell.setCellValue("${index + 1}.")
+                numCell.cellStyle = labelStyle
+
+                val actCell = segRow.createCell(1)
+                actCell.setCellValue(segAct)
+                actCell.cellStyle = valueStyle
+                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 1, 5))
+
+                currentRow++
+            }
+        } else {
+            val emptySegRow = sheet.createRow(currentRow)
+            emptySegRow.heightInPoints = 20f
+            val emptySegCell = emptySegRow.createCell(0)
+            emptySegCell.setCellValue("Sin actividades de seguridad registradas")
+            emptySegCell.cellStyle = valueStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
             currentRow++
         }
 
@@ -476,36 +557,111 @@ object ExcelGenerator {
             }
         }
 
-        // 6. Signature Section
-        if (!report.signaturePath.isNullOrEmpty()) {
-            val sigFile = File(report.signaturePath)
-            if (sigFile.exists()) {
-                val sigHeaderRow = sheet.createRow(currentRow)
-                sigHeaderRow.heightInPoints = 22f
-                val sigHeaderCell = sigHeaderRow.createCell(0)
-                sigHeaderCell.setCellValue("Firma del Técnico")
-                sigHeaderCell.cellStyle = sectionHeaderStyle
-                sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+        // 10. Avance por Área
+        if (report.areasAvance.isNotEmpty() && report.areasAvance.any { it.isNotBlank() }) {
+            val avanceHeaderRow = sheet.createRow(currentRow)
+            avanceHeaderRow.heightInPoints = 22f
+            val avanceHeaderCell = avanceHeaderRow.createCell(0)
+            avanceHeaderCell.setCellValue("Avance por Área / Disciplina")
+            avanceHeaderCell.cellStyle = sectionHeaderStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+            currentRow++
 
-                currentRow += 2
+            // Sub-encabezado
+            val avanceColHeader = sheet.createRow(currentRow)
+            avanceColHeader.heightInPoints = 20f
+            avanceColHeader.createCell(0).apply { setCellValue("Área / Disciplina"); cellStyle = labelStyle }
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 3))
+            avanceColHeader.createCell(4).apply { setCellValue("% Avance"); cellStyle = labelStyle }
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
+            currentRow++
 
+            report.areasAvance.forEachIndexed { index, area ->
+                if (area.isNotBlank()) {
+                    val pct = report.avancePorcentajes.getOrElse(index) { "0" }
+                    val avRow = sheet.createRow(currentRow)
+                    avRow.heightInPoints = 20f
+                    avRow.createCell(0).apply { setCellValue(area); cellStyle = valueStyle }
+                    sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 3))
+                    avRow.createCell(4).apply { setCellValue("$pct%"); cellStyle = valueStyle }
+                    sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 4, 5))
+                    currentRow++
+                }
+            }
+            currentRow++
+        }
+
+        // 11. Firmas de Conformidad (Supervisor y Contratista)
+        val hasSupervisorSig = !report.supervisorSignaturePath.isNullOrEmpty() && File(report.supervisorSignaturePath).exists()
+        val hasContractorSig = !report.signaturePath.isNullOrEmpty() && File(report.signaturePath).exists()
+
+        if (hasSupervisorSig || hasContractorSig) {
+            val sigHeaderRow = sheet.createRow(currentRow)
+            sigHeaderRow.heightInPoints = 22f
+            val sigHeaderCell = sigHeaderRow.createCell(0)
+            sigHeaderCell.setCellValue("Firmas de Conformidad")
+            sigHeaderCell.cellStyle = sectionHeaderStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 5))
+            currentRow += 2
+
+            val imageRow = currentRow
+            // Firma del Supervisor (Columnas 0 a 2)
+            if (hasSupervisorSig) {
+                val file = File(report.supervisorSignaturePath!!)
                 try {
-                    val bytes = compressImage(sigFile, 200, 100)
+                    val bytes = compressImage(file, 200, 100)
                     if (bytes != null) {
                         val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG)
                         val anchor = workbook.creationHelper.createClientAnchor().apply {
-                            setCol1(1)
-                            setRow1(currentRow)
-                            setCol2(4)
-                            setRow2(currentRow + 4)
+                            setCol1(0)
+                            setRow1(imageRow)
+                            setCol2(3)
+                            setRow2(imageRow + 4)
                         }
                         drawing.createPicture(anchor, pictureIdx)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                currentRow += 5
             }
+
+            // Firma del Contratista (Columnas 3 a 5)
+            if (hasContractorSig) {
+                val file = File(report.signaturePath!!)
+                try {
+                    val bytes = compressImage(file, 200, 100)
+                    if (bytes != null) {
+                        val pictureIdx = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG)
+                        val anchor = workbook.creationHelper.createClientAnchor().apply {
+                            setCol1(3)
+                            setRow1(imageRow)
+                            setCol2(6)
+                            setRow2(imageRow + 4)
+                        }
+                        drawing.createPicture(anchor, pictureIdx)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            currentRow += 4
+
+            // Fila de nombres debajo de las firmas
+            val namesRow = sheet.createRow(currentRow)
+            namesRow.heightInPoints = 20f
+
+            val supCell = namesRow.createCell(0)
+            supCell.setCellValue("Supervisor: ${report.supervisor.ifBlank { "N/A" }}")
+            supCell.cellStyle = labelStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 0, 2))
+
+            val conCell = namesRow.createCell(3)
+            conCell.setCellValue("Resp. Contratista: ${report.technicianName.ifBlank { "N/A" }}")
+            conCell.cellStyle = labelStyle
+            sheet.addMergedRegion(org.apache.poi.ss.util.CellRangeAddress(currentRow, currentRow, 3, 5))
+
+            currentRow += 2
         }
 
         // Set column widths

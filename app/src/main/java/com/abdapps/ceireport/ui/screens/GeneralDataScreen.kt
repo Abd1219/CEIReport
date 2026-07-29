@@ -3,6 +3,8 @@ package com.abdapps.ceireport.ui.screens
 import android.app.DatePickerDialog
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,9 +44,33 @@ fun GeneralDataScreen(
 
     var showExitDialog by remember { mutableStateOf(false) }
 
-    // Interceptar botón atrás nativo del dispositivo
+    // Launcher de Permiso de Ubicación
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            obtainLocation(context) { coords ->
+                viewModel.updateCurrentReport { r -> r.copy(location = coords) }
+            }
+        } else {
+            Toast.makeText(context, "Se requiere permiso de ubicación para obtener coordenadas", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun requestGpsLocation() {
+        val permission = android.Manifest.permission.ACCESS_FINE_LOCATION
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            obtainLocation(context) { coords ->
+                viewModel.updateCurrentReport { r -> r.copy(location = coords) }
+            }
+        } else {
+            locationPermissionLauncher.launch(permission)
+        }
+    }
+
+    // Interceptar botón atrás nativo del dispositivo (Guarda borrador y regresa al menú principal)
     BackHandler {
-        showExitDialog = true
+        viewModel.saveDraft { onNavigateBack() }
     }
 
     // ── DatePicker ────────────────────────────────────────────────────────────
@@ -79,7 +106,9 @@ fun GeneralDataScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { showExitDialog = true }) {
+                    IconButton(onClick = {
+                        viewModel.saveDraft { onNavigateBack() }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -96,40 +125,6 @@ fun GeneralDataScreen(
                     containerColor = HeaderBlue
                 )
             )
-        },
-        bottomBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 12.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { showExitDialog = true },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                    ) {
-                        Text("Regresar")
-                    }
-
-                    Button(
-                        onClick = { onNavigateNext() },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        Text("Siguiente", fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
         }
     ) { padding ->
         Column(
@@ -185,6 +180,40 @@ fun GeneralDataScreen(
                         label = "Disciplina",
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+
+            // ── Sección Ubicación / Coordenadas GPS ──────────────────────────────
+            FormCard(title = "Ubicación y Coordenadas GPS") {
+                OutlinedTextField(
+                    value = report.location,
+                    onValueChange = { viewModel.updateCurrentReport { r -> r.copy(location = it) } },
+                    label = { Text("Ubicación / Coordenadas GPS") },
+                    placeholder = { Text("Ej: Lat: 19.43260, Lng: -99.13320 o Sitio de obra...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = textFieldColors(),
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = { requestGpsLocation() }) {
+                            Icon(
+                                imageVector = Icons.Default.GpsFixed,
+                                contentDescription = "Obtener GPS",
+                                tint = HeaderBlue
+                            )
+                        }
+                    }
+                )
+
+                Button(
+                    onClick = { requestGpsLocation() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = HeaderBlue),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.GpsFixed, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Obtener Coordenadas GPS Automáticas", fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -406,3 +435,56 @@ fun textFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLabelColor = HeaderBlue,
     unfocusedLabelColor = TextSecondary
 )
+
+/** Obtiene las coordenadas GPS actuales usando LocationManager */
+@Suppress("DEPRECATION")
+private fun obtainLocation(context: android.content.Context, onLocationObtained: (String) -> Unit) {
+    try {
+        val locationManager = context.getSystemService(android.content.Context.LOCATION_SERVICE) as? android.location.LocationManager
+        if (locationManager == null) {
+            Toast.makeText(context, "Servicio de ubicación no disponible", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val isGpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
+        val isNetworkEnabled = locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+
+        if (!isGpsEnabled && !isNetworkEnabled) {
+            Toast.makeText(context, "Por favor activa el GPS en tu dispositivo", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        var lastLocation: android.location.Location? = null
+        if (isGpsEnabled) {
+            lastLocation = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+        }
+        if (lastLocation == null && isNetworkEnabled) {
+            lastLocation = locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+        }
+
+        if (lastLocation != null) {
+            val coords = "Lat: %.5f, Lng: %.5f".format(java.util.Locale.US, lastLocation.latitude, lastLocation.longitude)
+            onLocationObtained(coords)
+            Toast.makeText(context, "Coordenadas GPS obtenidas", Toast.LENGTH_SHORT).show()
+        } else {
+            val listener = object : android.location.LocationListener {
+                override fun onLocationChanged(location: android.location.Location) {
+                    val coords = "Lat: %.5f, Lng: %.5f".format(java.util.Locale.US, location.latitude, location.longitude)
+                    onLocationObtained(coords)
+                    locationManager.removeUpdates(this)
+                    Toast.makeText(context, "Coordenadas GPS obtenidas", Toast.LENGTH_SHORT).show()
+                }
+                override fun onProviderDisabled(provider: String) {}
+                override fun onProviderEnabled(provider: String) {}
+                override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
+            }
+            val provider = if (isGpsEnabled) android.location.LocationManager.GPS_PROVIDER else android.location.LocationManager.NETWORK_PROVIDER
+            locationManager.requestSingleUpdate(provider, listener, null)
+            Toast.makeText(context, "Obteniendo posición GPS...", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: SecurityException) {
+        Toast.makeText(context, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error al obtener ubicación: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+    }
+}
+

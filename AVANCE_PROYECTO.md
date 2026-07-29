@@ -53,15 +53,24 @@
 - **Registro Dinámico**: Lista interactiva para programar y planear las actividades de la siguiente jornada laboral con botón de agregar, diálogo interactivo y opción de eliminación.
 - **Exportación Excel**: Se exporta numerada como sección dedicada en el archivo Excel generado.
 
-### 10. Pantalla 7: Evidencias Fotográficas, Croquis Descriptivo y Firma
+### 10. Pantalla 7: Evidencias Fotográficas, Croquis Descriptivo y Firma del Contratista
 - **Corrección de Cámara**: Solucionado el fallo al abrir la cámara agregando gestión de permisos en tiempo real (`Manifest.permission.CAMERA`) y `FileProvider` con rutas ampliadas.
 - **Pie de Foto / Descripción de Fotografía**: Al tomar una foto o elegirla de la galería, se solicita un texto o nota descriptiva opcional que se muestra debajo de cada foto y se incluye en el reporte Excel.
 - **Croquis Descriptivo**: Apartado dedicado para adjuntar o capturar una imagen del croquis o esquema del área de trabajo.
 - **Firma Digital**: Modal interactivo de firma (*SignaturePad*) con previsualización en tiempo real.
 - **Exportación única a Excel (.xlsx)**: Generación automática del archivo Excel con fotos, notas, croquis, actividades y firma.
 
-### 7. Splash Screen
-- Animación de entrada con logo, barra de progreso y branding *"Desarrollado por AbdApps"*.
+### 11. Pantalla 8: Avance por Área, Supervisor y Finalización **[NUEVO]**
+- **Tabla de Avance por Disciplina/Área**: Registro dinámico con filas de Área y % de Avance (0-100). Botón para agregar nuevas filas y eliminar existentes.
+- **Firma del Supervisor**: Modal interactivo de firma digital (*SignaturePad*) para el supervisor de obra, independiente de la firma del contratista.
+- **Nombre del Supervisor**: Campo de texto para registrar el nombre del supervisor responsable de validar el reporte.
+- **Exportación Excel**: Sección dedicada en el archivo `.xlsx` con la tabla de avances y firma del supervisor.
+- **Flujo expandido a 8 pasos**: El formulario ahora incluye esta pantalla como paso final antes de exportar.
+- Entidad `Report` actualizada con campos `areasAvance`, `avancePorcentajes`, `supervisor` y `supervisorSignaturePath` (Room DB v8 pendiente).
+
+### 12. Splash Screen
+- Animación de entrada con **logo real `logocei.png`** del proyecto CEI (sustituye el ícono genérico), barra de progreso y branding *"Desarrollado por AbdApps"*.
+- Fondo del contenedor del logo actualizado a azul corporativo (`#132B66`) con borde sutil.
 
 ---
 
@@ -78,6 +87,14 @@
 
 ## 📅 Historial de Actualizaciones Recientes
 
+- **[2026-07-28]** *(Sesión 6 - Pantalla Finalización, Avance por Área, Firma del Supervisor y Logo Real en SplashScreen)*:
+  - Nueva **Pantalla 8 (FinalizeScreen)**: Captura del avance de obra por área/disciplina con porcentaje (0-100%), nombre del supervisor y su firma digital independiente.
+  - **Flujo expandido a 8 pasos**: El `HorizontalPager` ahora gestiona 8 pantallas; `FinalizeScreen` se integra como paso final.
+  - **Logo real en SplashScreen**: Sustituido el ícono genérico `FlashOn` por el logo oficial `logocei.png` con fondo azul corporativo y borde sutil.
+  - **Corrección de navegación Back**: El botón de retroceso en todas las pantallas intermedias (Pasos 2-8) ahora invoca `onExitFlow()` directamente, permitiendo regresar al Dashboard sin reiniciar el flujo.
+  - Entidad `Report` ampliada con `areasAvance: List<String>`, `avancePorcentajes: List<String>`, `supervisor: String` y `supervisorSignaturePath: String?`.
+  - `ReportViewModel` actualizado con los setters para los nuevos campos de la pantalla de finalización.
+  - `AGENTS.md` creado con configuración de entorno para compilación Gradle con JDK de Android Studio.
 - **[2026-07-28]** *(Sesión 5 - Actividades Planeadas, Croquis & Solución de Cámara)*:
   - Nueva **Pantalla 6**: Actividades Planeadas para el Siguiente Día con lista dinámica interactiva.
   - **Corrección de error de Cámara**: Implementada solicitud de permisos `CAMERA` en tiempo real y `FileProvider` configurado con todas las rutas necesarias.

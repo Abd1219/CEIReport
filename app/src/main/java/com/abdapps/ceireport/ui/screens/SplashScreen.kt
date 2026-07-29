@@ -1,7 +1,9 @@
 package com.abdapps.ceireport.ui.screens
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,10 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abdapps.ceireport.R
 import kotlinx.coroutines.delay
 
 // ── Colores del splash ────────────────────────────────────────────────────────
@@ -103,20 +108,23 @@ fun SplashScreen(onFinished: () -> Unit) {
                     .graphicsLayerCompat(alpha = logoAlpha, translationY = logoOffset),
                 contentAlignment = Alignment.BottomEnd
             ) {
-                // Fondo blanco redondeado
+                // Fondo contenedor con contraste para destacar el logo PNG
                 Box(
                     modifier = Modifier
                         .size(100.dp)
                         .align(Alignment.TopStart)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White),
+                        .background(Color(0xFF132B66))
+                        .border(1.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.FlashOn,
-                        contentDescription = null,
-                        tint = SplashGlow,
-                        modifier = Modifier.size(56.dp)
+                    Image(
+                        painter = painterResource(id = R.drawable.logocei),
+                        contentDescription = "Logo CEI",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .padding(4.dp)
                     )
                 }
                 // Badge naranja con ícono de clipboard

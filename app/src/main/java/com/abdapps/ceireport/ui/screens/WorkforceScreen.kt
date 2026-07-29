@@ -57,9 +57,6 @@ fun WorkforceScreen(
 
     var showExitDialog by remember { mutableStateOf(false) }
 
-    // Interceptar botón atrás nativo del dispositivo
-    BackHandler { showExitDialog = true }
-
     // Estado local para cantidades y horas — inicializado desde el reporte
     val cantidades = remember(report.id) {
         mutableStateListOf<String>().apply {
@@ -90,6 +87,19 @@ fun WorkforceScreen(
         }
     }
 
+    // Interceptar botón atrás nativo del dispositivo
+    BackHandler {
+        persistChanges()
+        viewModel.saveDraft { onNavigateBack() }
+    }
+
+    // Persistir automáticamente al desmontar la pantalla (navegación horizontal)
+    DisposableEffect(Unit) {
+        onDispose {
+            persistChanges()
+        }
+    }
+
     Scaffold(
         containerColor = AppBackground,
         topBar = {
@@ -110,7 +120,10 @@ fun WorkforceScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { showExitDialog = true }) {
+                    IconButton(onClick = {
+                        persistChanges()
+                        viewModel.saveDraft { onNavigateBack() }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -126,45 +139,6 @@ fun WorkforceScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderBlue)
             )
-        },
-        bottomBar = {
-            Surface(color = Color.White, shadowElevation = 12.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            persistChanges()
-                            onNavigateBack()
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                    ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Anterior")
-                    }
-
-                    Button(
-                        onClick = {
-                            persistChanges()
-                            onNavigateNext()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        Text("Siguiente", fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
         }
     ) { padding ->
         Column(
@@ -231,11 +205,13 @@ fun WorkforceScreen(
                             onCantidadChange = { value ->
                                 if (index < cantidades.size) {
                                     cantidades[index] = value.filter { it.isDigit() }
+                                    persistChanges()
                                 }
                             },
                             onHorasChange = { value ->
                                 if (index < horas.size) {
                                     horas[index] = value.filter { it.isDigit() || it == '.' }
+                                    persistChanges()
                                 }
                             }
                         )

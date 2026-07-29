@@ -137,6 +137,29 @@ class ReportViewModel(private val repository: ReportRepository) : ViewModel() {
         }
     }
 
+    fun removeSignature() {
+        updateCurrentReport { it.copy(signaturePath = null) }
+    }
+
+    fun saveSupervisorSignature(context: Context, bitmap: Bitmap) {
+        val report = _currentReport.value ?: return
+        viewModelScope.launch {
+            try {
+                val file = createTempImageFile(context, "sig_supervisor", ".png")
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                updateCurrentReport { it.copy(supervisorSignaturePath = file.absolutePath) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun removeSupervisorSignature() {
+        updateCurrentReport { it.copy(supervisorSignaturePath = null) }
+    }
+
     fun finalizeReport(context: Context, onComplete: (excelFile: File) -> Unit) {
         val report = _currentReport.value ?: return
         viewModelScope.launch {

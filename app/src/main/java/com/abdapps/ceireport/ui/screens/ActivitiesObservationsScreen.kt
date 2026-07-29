@@ -45,9 +45,9 @@ fun ActivitiesObservationsScreen(
 
     var showExitDialog by remember { mutableStateOf(false) }
 
-    // Interceptar botón atrás nativo del dispositivo
+    // Interceptar botón atrás nativo del dispositivo (Guarda borrador y regresa al menú principal)
     BackHandler {
-        showExitDialog = true
+        viewModel.saveDraft { onNavigateBack() }
     }
 
     Scaffold(
@@ -70,7 +70,9 @@ fun ActivitiesObservationsScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { showExitDialog = true }) {
+                    IconButton(onClick = {
+                        viewModel.saveDraft { onNavigateBack() }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -87,42 +89,6 @@ fun ActivitiesObservationsScreen(
                     containerColor = HeaderBlue
                 )
             )
-        },
-        bottomBar = {
-            Surface(
-                color = Color.White,
-                shadowElevation = 12.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { onNavigateBack() },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                    ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Anterior")
-                    }
-
-                    Button(
-                        onClick = { onNavigateNext() },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        Text("Siguiente", fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
         }
     ) { padding ->
         Column(

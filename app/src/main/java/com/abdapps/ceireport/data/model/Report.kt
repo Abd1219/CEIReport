@@ -58,10 +58,19 @@ data class Report(
     val photoCaptions: List<String> = emptyList(),          // Descripción por cada foto en photos
     val croquisPath: String? = null,                        // Ruta de imagen de Croquis Descriptivo
 
+    // ── Pantalla 8: Avance, Supervisor y Finalización ─────────────────────
+    @ColumnInfo(defaultValue = "")
+    val areasAvance: List<String> = emptyList(),            // Nombre de área/disciplina
+    @ColumnInfo(defaultValue = "")
+    val avancePorcentajes: List<String> = emptyList(),      // % de avance por área (0-100)
+    @ColumnInfo(defaultValue = "")
+    val supervisor: String = "",                            // Nombre del Supervisor
+    val supervisorSignaturePath: String? = null,           // Ruta de imagen de Firma del Supervisor
+
     // ── Campos generales existentes ──────────────────────────────────────────
     val title: String = "",
     val date: String = "",
-    val technicianName: String = "",   // Técnico Responsable
+    val technicianName: String = "",   // Responsable de Contratista
     val location: String = "",
     val description: String = "",
     val observations: String = "",

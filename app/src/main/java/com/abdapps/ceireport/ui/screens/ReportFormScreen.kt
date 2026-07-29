@@ -66,8 +66,10 @@ fun ReportFormScreen(
     // Estado para captura de Croquis Descriptivo
     var isCroquisPicker by remember { mutableStateOf(false) }
 
-    // Interceptar botón atrás nativo del dispositivo
-    BackHandler { showExitDialog = true }
+    // Interceptar botón atrás nativo del dispositivo (Guarda borrador y regresa al menú principal)
+    BackHandler {
+        viewModel.saveDraft { onNavigateBack() }
+    }
 
     // ── Launchers de Cámara y Galería con Manejo Seguro de Permisos ──────────
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
@@ -145,14 +147,16 @@ fun ReportFormScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "Paso 7 de 7 — Evidencias y Firma",
+                            text = "Paso 7 de 8 — Evidencias y Firma",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f)
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { showExitDialog = true }) {
+                    IconButton(onClick = {
+                        viewModel.saveDraft { onNavigateBack() }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar", tint = Color.White)
                     }
                 },
@@ -167,48 +171,6 @@ fun ReportFormScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderBlue)
             )
-        },
-        bottomBar = {
-            Surface(color = Color.White, shadowElevation = 12.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { onNavigateBack() },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                    ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Anterior")
-                    }
-
-                    Button(
-                        onClick = {
-                            if (report.proyecto.isEmpty() && report.title.isEmpty()) {
-                                Toast.makeText(context, "Por favor indica el nombre o proyecto", Toast.LENGTH_SHORT).show()
-                            } else {
-                                viewModel.finalizeReport(context) { excelFile ->
-                                    Toast.makeText(context, "Reporte Excel generado con éxito", Toast.LENGTH_SHORT).show()
-                                    shareExcel(context, excelFile)
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Finalizar y Compartir Excel", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
         }
     ) { padding ->
         Column(
@@ -219,8 +181,8 @@ fun ReportFormScreen(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barra de progreso del flujo (Paso 7 de 7)
-            StepProgressBar(currentStep = 7, totalSteps = 7)
+            // Barra de progreso del flujo (Paso 7 de 8)
+            StepProgressBar(currentStep = 7, totalSteps = 8)
 
             // ── SECCIÓN 1: EVIDENCIAS FOTOGRÁFICAS ──────────────────────────
             FormCard(title = "Evidencias Fotográficas") {
@@ -627,7 +589,7 @@ private fun launchCameraInternal(context: Context, onUriReady: (Uri) -> Unit) {
     }
 }
 
-private fun shareExcel(context: Context, excelFile: File) {
+fun shareExcel(context: Context, excelFile: File) {
     try {
         val excelUri = FileProvider.getUriForFile(context, "com.abdapps.ceireport.fileprovider", excelFile)
         val intent = Intent(Intent.ACTION_SEND).apply {

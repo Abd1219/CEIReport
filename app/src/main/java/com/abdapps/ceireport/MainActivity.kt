@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import com.abdapps.ceireport.data.local.ReportDatabase
 import com.abdapps.ceireport.data.repository.ReportRepository
 import com.abdapps.ceireport.ui.screens.ActivitiesObservationsScreen
+import com.abdapps.ceireport.ui.screens.FinalizeScreen
 import com.abdapps.ceireport.ui.screens.GeneralDataScreen
 import com.abdapps.ceireport.ui.screens.MachineryScreen
 import com.abdapps.ceireport.ui.screens.PlannedActivitiesScreen
@@ -85,7 +86,7 @@ private fun FormPagerFlow(
     viewModel: ReportViewModel,
     onExitFlow: () -> Unit
 ) {
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 7 })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 8 })
     val coroutineScope = rememberCoroutineScope()
 
     fun scrollToPage(targetPage: Int) {
@@ -114,7 +115,7 @@ private fun FormPagerFlow(
             1 -> {
                 SafetyWeatherScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(0) },
+                    onNavigateBack = { onExitFlow() },
                     onNavigateNext = { scrollToPage(2) }
                 )
             }
@@ -122,7 +123,7 @@ private fun FormPagerFlow(
             2 -> {
                 ActivitiesObservationsScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(1) },
+                    onNavigateBack = { onExitFlow() },
                     onNavigateNext = { scrollToPage(3) }
                 )
             }
@@ -130,7 +131,7 @@ private fun FormPagerFlow(
             3 -> {
                 WorkforceScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(2) },
+                    onNavigateBack = { onExitFlow() },
                     onNavigateNext = { scrollToPage(4) }
                 )
             }
@@ -138,7 +139,7 @@ private fun FormPagerFlow(
             4 -> {
                 MachineryScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(3) },
+                    onNavigateBack = { onExitFlow() },
                     onNavigateNext = { scrollToPage(5) }
                 )
             }
@@ -146,7 +147,7 @@ private fun FormPagerFlow(
             5 -> {
                 PlannedActivitiesScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(4) },
+                    onNavigateBack = { onExitFlow() },
                     onNavigateNext = { scrollToPage(6) }
                 )
             }
@@ -154,7 +155,14 @@ private fun FormPagerFlow(
             6 -> {
                 ReportFormScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { scrollToPage(5) }
+                    onNavigateBack = { onExitFlow() }
+                )
+            }
+            // ── Paso 8: Avance, Responsables y Finalización ───────────
+            7 -> {
+                FinalizeScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { onExitFlow() }
                 )
             }
         }

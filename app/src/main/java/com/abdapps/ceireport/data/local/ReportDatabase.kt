@@ -9,7 +9,7 @@ import com.abdapps.ceireport.data.model.Report
 
 @Database(
     entities = [Report::class],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
